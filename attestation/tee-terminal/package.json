@@ -12,22 +12,25 @@
     "dev:cli": "tsx src/cli.ts",
     "start": "tsx src/server.ts",
     "cli": "tsx src/cli.ts",
-    "test": "tsx --test test/neon-infer.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "npm run build && node --test tests/*.test.cjs"
+    "test": "tsx --test test/neon-infer.test.ts && npm run build && node --test tests/*.test.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
+    "@neondatabase/ai-sdk-provider": "^1.3.1",
     "@solana/kit": "^2.1.1",
+    "ai": "^7.0.164",
     "dotenv": "^16.4.7",
     "uuid": "^11.1.0",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.5.13",
     "ts-node": "^10.9.2",
+    "tsx": "^4.23.15",
     "typescript": "^5.8.3"
   }
 }
