@@ -205,3 +205,15 @@ describe('Profile Info', () => {
     }
   });
 });
+
+
+describe('Routing exclusions', () => {
+  const scored: ScoredRequest = { tier: 'SIMPLE', scores: {} as any, totalScore: 0.1, reasoning: 'test' };
+  it('never restores an explicitly excluded model when no alternatives remain', () => {
+    assert.throws(() => routeRequest(scored, 'eco', ['']), /No enabled, non-excluded model/);
+  });
+  it('applies case insensitive exclusions to fallback models', () => {
+    const { model } = routeRequest(scored, 'eco', ['NVIDIA']);
+    assert.ok(!model.id.toLowerCase().includes('nvidia'));
+  });
+});

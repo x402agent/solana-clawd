@@ -40,7 +40,7 @@ function findFallback(
   profile: RoutingProfile,
   excludedModels: string[],
 ): ModelEntry {
-  const available = getEnabledModels(excludedModels);
+  const available = getEnabledModels().filter(model => !isExcluded(model.id, excludedModels));
 
   // Sort by profile preference
   const sorted = [...available].sort((a, b) => {
@@ -65,12 +65,7 @@ function findFallback(
 
   if (tierFiltered.length > 0) return tierFiltered[0]!;
 
-  // Safety net: if all models in tier are excluded, ignore exclusions
-  const allForTier = getEnabledModels([]).filter(m => modelFitsTier(m, tier));
-  if (allForTier.length > 0) return allForTier[0]!;
-
-  // Absolute fallback: return any enabled model
-  return available[0] ?? getEnabledModels([])[0]!;
+  throw new Error(`No enabled, non-excluded model can handle ${tier} requests`);
 }
 
 // ── Tier Fitness Check ──────────────────────────────────────────────

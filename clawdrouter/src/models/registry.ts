@@ -437,7 +437,7 @@ export const MODEL_REGISTRY: ModelEntry[] = [
 
 export const TIER_MAPPING: Record<RequestTier, TierMapping> = {
   SIMPLE: {
-    eco: 'deepseek/deepseek-v4-flash',   // cheapest paid frontier with tool use
+    eco: 'nvidia/gpt-oss-120b',          // free model for simple requests
     auto: 'google/gemini-2.5-flash',
     premium: 'nvidia/kimi-k2.5',
   },
