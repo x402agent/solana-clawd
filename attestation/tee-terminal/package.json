@@ -8,10 +8,11 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev:server": "ts-node src/server.ts",
-    "dev:cli": "ts-node src/cli.ts",
-    "start": "node dist/server.js",
-    "cli": "ts-node src/cli.ts",
+    "dev:server": "tsx src/server.ts",
+    "dev:cli": "tsx src/cli.ts",
+    "start": "tsx src/server.ts",
+    "cli": "tsx src/cli.ts",
+    "test": "tsx --test test/neon-infer.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "npm run build && node --test tests/*.test.cjs"
   },
