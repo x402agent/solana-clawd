@@ -1,7 +1,7 @@
 {
   "name": "@solana-clawd/clawdrouter",
   "version": "0.1.0",
-  "description": "The LLM router built for autonomous Solana agents — Solana-native, wallet-signed, USDC micropayments",
+  "description": "The LLM router built for autonomous Solana agents \u2014 Solana-native, wallet-signed, USDC micropayments",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -13,7 +13,8 @@
     "start": "node dist/index.js",
     "test": "tsx --test tests/*.test.ts",
     "doctor": "tsx src/index.ts doctor",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "keywords": [
     "solana",

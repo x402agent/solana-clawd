@@ -33,7 +33,7 @@ function isRateLimited(ip: string): boolean {
 // ---------------------------------------------------------------------------
 // Agent preset metadata
 // ---------------------------------------------------------------------------
-const BASE_URL = process.env.GATEWAY_BASE_URL ?? 'https://solanaclawd.com';
+const BASE_URL = process.env.GATEWAY_BASE_URL ?? 'https://x402.wtf';
 
 const PRESET_AGENTS: Record<number, { name: string; uri: string; symbol: string }> = {
   1: { name: 'The Analyst', symbol: 'ANALYST', uri: `${BASE_URL}/metadata/agent1.json` },

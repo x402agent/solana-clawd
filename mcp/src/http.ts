@@ -1,105 +1,112 @@
 #!/usr/bin/env node
-/**
- * solana-clawd MCP Server — HTTP + SSE entrypoint
- * Deploy to Fly.io: fly launch --config mcp/fly.toml
- *
- * No private key, no wallet required.
- * PORT defaults to 3000 (Fly.io sets it automatically).
- * Set MCP_API_KEY to restrict access (optional — leave blank for open).
- */
-
+/** Streamable HTTP and legacy SSE entrypoint. MCP_PORT takes precedence over PORT. */
 import express from "express";
 import { randomUUID } from "node:crypto";
+import { pathToFileURL } from "node:url";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
-import { createServer } from "./server.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
+import { createServer, SERVER_VERSION } from "./server.js";
 
-const PORT = parseInt(process.env.PORT ?? "3000", 10);
-const API_KEY = process.env.MCP_API_KEY;
-
-function authMiddleware(req: express.Request, res: express.Response, next: express.NextFunction): void {
-  if (!API_KEY || req.path === "/health") return next();
-  const auth = req.headers.authorization;
-  if (auth !== `Bearer ${API_KEY}`) { res.status(401).json({ error: "Unauthorized" }); return; }
-  next();
-}
-
-function cors(_req: express.Request, res: express.Response, next: express.NextFunction): void {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, mcp-session-id");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-  next();
-}
-
-async function main(): Promise<void> {
+export function createHttpApp(apiKey = process.env.MCP_API_KEY) {
   const app = express();
+  const transports = new Map<string, StreamableHTTPServerTransport>();
+  const sseTransports = new Map<string, SSEServerTransport>();
+  app.use((_req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, mcp-session-id, mcp-protocol-version, Last-Event-ID");
+    res.setHeader("Access-Control-Expose-Headers", "mcp-session-id, mcp-protocol-version");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+    next();
+  });
+  // Browser preflights carry no bearer token.
+  app.options("*", (_req, res) => { res.sendStatus(204); });
+  app.use((req, res, next) => {
+    if (!apiKey || req.path === "/health") return next();
+    if (req.headers.authorization !== `Bearer ${apiKey}`) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    next();
+  });
   app.use(express.json());
-  app.use(cors);
-  app.use(authMiddleware);
-  app.options("*", (_req, res) => res.sendStatus(204));
-
   app.get("/health", (_req, res) => res.json({
-    status: "ok",
-    server: "solana-clawd",
-    version: "1.0.0",
-    auth: API_KEY ? "enabled" : "open",
+    status: "ok", server: "solana-clawd", version: SERVER_VERSION,
+    auth: apiKey ? "enabled" : "open",
     docs: "https://github.com/x402agent/solana-clawd",
   }));
 
-  // ── Streamable HTTP ──────────────────────────────────────────────────────
-  const transports = new Map<string, StreamableHTTPServerTransport>();
-
-  app.post("/mcp", async (req, res) => {
-    const sid = (req.headers["mcp-session-id"] as string) ?? undefined;
-    let t = sid ? transports.get(sid) : undefined;
-    if (!t) {
-      const s = await createServer();
-      t = new StreamableHTTPServerTransport({ sessionIdGenerator: () => randomUUID() });
-      await s.connect(t);
-      t.onclose = () => { if (t!.sessionId) transports.delete(t!.sessionId); };
-    }
-    await t.handleRequest(req, res, req.body);
-    if (t.sessionId && !transports.has(t.sessionId)) transports.set(t.sessionId, t);
+  app.post("/mcp", async (req, res, next) => {
+    try {
+      const sid = req.get("mcp-session-id");
+      let transport = sid ? transports.get(sid) : undefined;
+      if (sid && !transport) {
+        res.status(404).json({ jsonrpc: "2.0", id: null, error: { code: -32001, message: "Session not found" } });
+        return;
+      }
+      if (!transport) {
+        if (!isInitializeRequest(req.body)) {
+          res.status(400).json({ jsonrpc: "2.0", id: null, error: { code: -32000, message: "Initialize a session first" } });
+          return;
+        }
+        const server = await createServer();
+        const fresh = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => randomUUID(),
+          onsessioninitialized: (sessionId) => { transports.set(sessionId, fresh); },
+        });
+        await server.connect(fresh);
+        fresh.onclose = () => { if (fresh.sessionId) transports.delete(fresh.sessionId); };
+        transport = fresh;
+      }
+      await transport.handleRequest(req, res, req.body);
+    } catch (error) { next(error); }
   });
 
-  app.get("/mcp", async (req, res) => {
-    const sid = req.headers["mcp-session-id"] as string | undefined;
-    if (!sid || !transports.has(sid)) { res.status(400).json({ error: "Invalid session" }); return; }
-    await transports.get(sid)!.handleRequest(req, res);
+  for (const method of ["get", "delete"] as const) {
+    app[method]("/mcp", async (req, res, next) => {
+      try {
+        const sid = req.get("mcp-session-id");
+        const transport = sid ? transports.get(sid) : undefined;
+        if (!transport) { res.status(sid ? 404 : 400).json({ error: "Invalid session" }); return; }
+        await transport.handleRequest(req, res);
+      } catch (error) { next(error); }
+    });
+  }
+
+  app.get("/sse", async (_req, res, next) => {
+    try {
+      const server = await createServer();
+      const transport = new SSEServerTransport("/messages", res);
+      sseTransports.set(transport.sessionId, transport);
+      transport.onclose = () => { sseTransports.delete(transport.sessionId); };
+      await server.connect(transport);
+    } catch (error) { next(error); }
+  });
+  app.post("/messages", async (req, res, next) => {
+    try {
+      const transport = sseTransports.get(String(req.query.sessionId));
+      if (!transport) { res.status(400).json({ error: "Unknown session" }); return; }
+      await transport.handlePostMessage(req, res, req.body);
+    } catch (error) { next(error); }
+  });
+  app.use((_error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (!res.headersSent) res.status(500).json({ error: "MCP request failed" });
   });
 
-  app.delete("/mcp", async (req, res) => {
-    const sid = req.headers["mcp-session-id"] as string | undefined;
-    if (sid && transports.has(sid)) { await transports.get(sid)!.close(); transports.delete(sid); }
-    res.json({ ok: true });
-  });
-
-  // ── Legacy SSE ───────────────────────────────────────────────────────────
-  const sseTransports = new Map<string, SSEServerTransport>();
-
-  app.get("/sse", async (_req, res) => {
-    const s = await createServer();
-    const t = new SSEServerTransport("/messages", res);
-    sseTransports.set(t.sessionId, t);
-    t.onclose = () => sseTransports.delete(t.sessionId);
-    await s.connect(t);
-  });
-
-  app.post("/messages", async (req, res) => {
-    const sid = req.query.sessionId as string;
-    const t = sseTransports.get(sid);
-    if (!t) { res.status(400).json({ error: "Unknown session" }); return; }
-    await t.handlePostMessage(req, res, req.body);
-  });
-
-  app.listen(PORT, () => {
-    console.log(`\n🌊 solana-clawd MCP server on :${PORT}`);
-    console.log(`   POST/GET http://0.0.0.0:${PORT}/mcp   (Streamable HTTP)`);
-    console.log(`   GET      http://0.0.0.0:${PORT}/sse   (Legacy SSE)`);
-    console.log(`   GET      http://0.0.0.0:${PORT}/health`);
-    console.log(`   Auth: ${API_KEY ? "Bearer token required" : "open (no MCP_API_KEY set)"}`);
-    console.log();
-  });
+  return { app, close: async () => {
+    await Promise.all([...transports.values(), ...sseTransports.values()].map((transport) => transport.close()));
+    transports.clear();
+    sseTransports.clear();
+  } };
 }
 
-main().catch(e => { console.error("Fatal:", e); process.exit(1); });
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const port = Number(process.env.MCP_PORT || process.env.PORT || 3001);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("MCP_PORT must be a port between 1 and 65535");
+  const { app, close } = createHttpApp();
+  const listener = app.listen(port, process.env.MCP_HOST || "0.0.0.0", () => console.log(`solana-clawd MCP listening on :${port} (/mcp, /sse, /health)`));
+  listener.on("error", (error) => { console.error(error.message); process.exitCode = 1; });
+  const shutdown = async () => { await close(); listener.close(); };
+  process.once("SIGINT", shutdown);
+  process.once("SIGTERM", shutdown);
+}

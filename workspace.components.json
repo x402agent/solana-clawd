@@ -1,0 +1,1054 @@
+{
+  "schemaVersion": 1,
+  "description": "Canonical build graph and inventory. Optional and reference components are cataloged, not implicitly installed or executed.",
+  "profiles": {
+    "core": [
+      "root",
+      "sdk",
+      "router",
+      "leviathan",
+      "mcp",
+      "gateway",
+      "tui"
+    ],
+    "services": [
+      "root",
+      "sdk",
+      "router",
+      "leviathan",
+      "mcp",
+      "gateway",
+      "tui",
+      "amm",
+      "perps-aggregator"
+    ],
+    "packages": [
+      "agentwallet",
+      "clawd-sdk",
+      "clawd-wallet",
+      "clawd-perps",
+      "perps-aggregator",
+      "clawd",
+      "standalone"
+    ],
+    "attestation": [
+      "tee-terminal",
+      "private-inference",
+      "agent-router"
+    ]
+  },
+  "components": [
+    {
+      "id": "root",
+      "path": ".",
+      "category": "core",
+      "purpose": "Public SDK facade and CLI distribution",
+      "required": true,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [
+        "sdk"
+      ],
+      "tasks": {
+        "check": "typecheck:root",
+        "build": "build:root"
+      }
+    },
+    {
+      "id": "sdk",
+      "path": "sdk",
+      "category": "core",
+      "purpose": "Canonical TypeScript SDK and agent harness",
+      "required": true,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      }
+    },
+    {
+      "id": "router",
+      "path": "clawdrouter",
+      "category": "core",
+      "purpose": "Model routing library and optional funded router service",
+      "required": true,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [
+        "sdk"
+      ],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      },
+      "runtime": {
+        "environment": [
+          "OPENROUTER_API_KEY",
+          "XAI_API_KEY",
+          "DEEPSEEK_API_KEY"
+        ],
+        "notes": "Routing providers require separate credentials; the funded router server is opt-in."
+      }
+    },
+    {
+      "id": "leviathan",
+      "path": "leviathan",
+      "category": "core",
+      "purpose": "Runtime CLI and memory/orchestration loop",
+      "required": true,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [
+        "sdk"
+      ],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      }
+    },
+    {
+      "id": "mcp",
+      "path": "mcp",
+      "category": "core",
+      "purpose": "MCP stdio and HTTP tool server",
+      "required": true,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [
+        "sdk",
+        "router",
+        "leviathan"
+      ],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      },
+      "runtime": {
+        "port": 3001,
+        "environment": [
+          "MCP_PORT",
+          "GATEWAY_BASE_URL"
+        ],
+        "connectsTo": [
+          "gateway",
+          "router",
+          "leviathan"
+        ],
+        "notes": "HTTP and stdio are separate transports. Configure external providers before invoking their tools."
+      }
+    },
+    {
+      "id": "gateway",
+      "path": "gateway",
+      "category": "core",
+      "purpose": "HTTP gateway, Solana data and optional Telegram integration",
+      "required": true,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [
+        "sdk"
+      ],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      },
+      "runtime": {
+        "port": 8080,
+        "environment": [
+          "PORT",
+          "GATEWAY_BASE_URL",
+          "SOLANA_RPC_URL",
+          "HELIUS_API_KEY",
+          "BIRDEYE_API_KEY"
+        ],
+        "connectsTo": [
+          "mcp"
+        ],
+        "notes": "Starts independently; external RPC, registry and Telegram services require their own configuration."
+      }
+    },
+    {
+      "id": "tui",
+      "path": "tui",
+      "category": "core",
+      "purpose": "Interactive terminal client",
+      "required": true,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [
+        "sdk",
+        "mcp",
+        "router"
+      ],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      }
+    },
+    {
+      "id": "amm",
+      "path": "amm",
+      "category": "optional",
+      "purpose": "AMM quote, pool math and MCP adapters",
+      "required": false,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [
+        "sdk"
+      ],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      }
+    },
+    {
+      "id": "claude-config",
+      "path": ".claude",
+      "category": "configuration",
+      "purpose": "Local coding-agent configuration",
+      "required": false
+    },
+    {
+      "id": "github",
+      "path": ".github",
+      "category": "configuration",
+      "purpose": "Repository automation and CI workflows",
+      "required": false
+    },
+    {
+      "id": "a2a",
+      "path": "a2a-x402-main",
+      "category": "reference",
+      "purpose": "A2A x402 protocol specification and Python examples",
+      "required": false,
+      "toolchain": [
+        "python"
+      ]
+    },
+    {
+      "id": "adk",
+      "path": "adk",
+      "category": "optional",
+      "purpose": "Google ADK adapter",
+      "required": false,
+      "manifests": [
+        "package.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "runtime": {
+        "connectsTo": [
+          "mcp",
+          "gateway"
+        ]
+      }
+    },
+    {
+      "id": "agent-kit",
+      "path": "agent-kit",
+      "category": "optional",
+      "purpose": "Independent pnpm workspace for agent, registry, Pump and x402 kits",
+      "required": false,
+      "manifests": [
+        "package.json"
+      ],
+      "toolchain": [
+        "node",
+        "pnpm"
+      ]
+    },
+    {
+      "id": "agent-tasks",
+      "path": "agent-tasks",
+      "category": "reference",
+      "purpose": "Agent task templates and examples",
+      "required": false
+    },
+    {
+      "id": "agents",
+      "path": "agents",
+      "category": "optional",
+      "purpose": "Agent hub, definitions, catalog and deploy API",
+      "required": false,
+      "manifests": [
+        "package.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ]
+    },
+    {
+      "id": "apps",
+      "path": "apps",
+      "category": "optional",
+      "purpose": "Desktop companions and BeepBoop worker/site/backend",
+      "required": false,
+      "toolchain": [
+        "swift",
+        "node"
+      ]
+    },
+    {
+      "id": "attestation",
+      "path": "attestation",
+      "category": "optional",
+      "purpose": "Solana attestation program, generated clients and Lean proofs",
+      "required": false,
+      "manifests": [
+        "package.json",
+        "Cargo.toml"
+      ],
+      "toolchain": [
+        "cargo",
+        "anchor",
+        "lake"
+      ],
+      "runtime": {
+        "connectsTo": [
+          "tee-terminal",
+          "private-inference",
+          "agent-router"
+        ]
+      }
+    },
+    {
+      "id": "automaton",
+      "path": "automaton-main",
+      "category": "optional",
+      "purpose": "Independent pnpm automation runtime and dashboard",
+      "required": false,
+      "manifests": [
+        "package.json"
+      ],
+      "toolchain": [
+        "node",
+        "pnpm"
+      ]
+    },
+    {
+      "id": "browser-extension",
+      "path": "chrome-extension",
+      "category": "optional",
+      "purpose": "Browser extension and page-agent packages",
+      "required": false,
+      "toolchain": [
+        "node"
+      ]
+    },
+    {
+      "id": "cloud-os",
+      "path": "clawd-cloud-os",
+      "category": "optional",
+      "purpose": "Cloud OS bootstrap scripts and agent VM configuration",
+      "required": false,
+      "toolchain": [
+        "bash"
+      ]
+    },
+    {
+      "id": "clawdcli",
+      "path": "clawdcli",
+      "category": "reference",
+      "purpose": "CLI distribution wrappers and installer artifacts",
+      "required": false
+    },
+    {
+      "id": "dark-defi",
+      "path": "dark-defi",
+      "category": "optional",
+      "purpose": "Independent Bun dark DeFi terminal and embedded protocol references",
+      "required": false,
+      "manifests": [
+        "package.json"
+      ],
+      "toolchain": [
+        "bun",
+        "cargo"
+      ]
+    },
+    {
+      "id": "data",
+      "path": "data",
+      "category": "data",
+      "purpose": "Local non-secret catalogs and protocol metadata",
+      "required": false
+    },
+    {
+      "id": "deep-clawd",
+      "path": "deep-clawd",
+      "category": "optional",
+      "purpose": "DFlow orientation and autonomous loop; paper/live modes require separate review",
+      "required": false,
+      "manifests": [
+        "package.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm",
+        "dflow"
+      ],
+      "runtime": {
+        "connectsTo": [
+          "router"
+        ]
+      }
+    },
+    {
+      "id": "docs",
+      "path": "docs",
+      "category": "documentation",
+      "purpose": "Workspace maps, provider snapshots and operator runbooks",
+      "required": false
+    },
+    {
+      "id": "email-worker",
+      "path": "email-worker",
+      "category": "optional",
+      "purpose": "Cloudflare inbound email worker",
+      "required": false,
+      "manifests": [
+        "package.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm",
+        "wrangler"
+      ]
+    },
+    {
+      "id": "examples",
+      "path": "examples",
+      "category": "reference",
+      "purpose": "SDK examples; some can invoke providers or transactions",
+      "required": false
+    },
+    {
+      "id": "formal-verification",
+      "path": "formal_verification",
+      "category": "optional",
+      "purpose": "Agent verification gate, Kani and proof helpers",
+      "required": false,
+      "toolchain": [
+        "cargo",
+        "lake"
+      ]
+    },
+    {
+      "id": "hackathon",
+      "path": "hackathon",
+      "category": "documentation",
+      "purpose": "Submission material and judge walkthroughs",
+      "required": false
+    },
+    {
+      "id": "vault",
+      "path": "llm-wiki-tang",
+      "category": "optional",
+      "purpose": "Knowledge vault with Python API/MCP and web UI",
+      "required": false,
+      "toolchain": [
+        "python",
+        "node",
+        "npm"
+      ]
+    },
+    {
+      "id": "oracle",
+      "path": "llm_oracle",
+      "category": "optional",
+      "purpose": "Rust LLM oracle and independent Percolator CLI",
+      "required": false,
+      "manifests": [
+        "Cargo.toml"
+      ],
+      "toolchain": [
+        "cargo",
+        "pnpm"
+      ]
+    },
+    {
+      "id": "memory",
+      "path": "memory",
+      "category": "optional",
+      "purpose": "Python memory provider and Hermes integration",
+      "required": false,
+      "manifests": [
+        "pyproject.toml"
+      ],
+      "toolchain": [
+        "python",
+        "uv"
+      ]
+    },
+    {
+      "id": "memebrain",
+      "path": "MemeBRain",
+      "category": "optional",
+      "purpose": "Python Mnemosyne memory bank and MCP companion",
+      "required": false,
+      "toolchain": [
+        "python"
+      ]
+    },
+    {
+      "id": "moltbook",
+      "path": "moltbook-agent",
+      "category": "optional",
+      "purpose": "Social agent and posting workflows",
+      "required": false,
+      "manifests": [
+        "package.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ]
+    },
+    {
+      "id": "ooda",
+      "path": "ooda",
+      "category": "optional",
+      "purpose": "OODA loop entrypoints and journal; execution may invoke external services",
+      "required": false,
+      "toolchain": [
+        "node"
+      ]
+    },
+    {
+      "id": "openclawd",
+      "path": "openclawd",
+      "category": "submodule",
+      "purpose": "Optional OpenClawd stack submodule",
+      "required": false,
+      "submodule": true
+    },
+    {
+      "id": "openshell",
+      "path": "openShell",
+      "category": "reference",
+      "purpose": "Sandbox policy and OpenShell references",
+      "required": false
+    },
+    {
+      "id": "operator",
+      "path": "operator",
+      "category": "optional",
+      "purpose": "Python operator agent and tests",
+      "required": false,
+      "manifests": [
+        "pyproject.toml"
+      ],
+      "toolchain": [
+        "python",
+        "uv"
+      ]
+    },
+    {
+      "id": "ore",
+      "path": "ore-master",
+      "category": "reference",
+      "purpose": "Embedded ORE Rust program, API and CLI workspace",
+      "required": false,
+      "manifests": [
+        "Cargo.toml"
+      ],
+      "toolchain": [
+        "cargo"
+      ]
+    },
+    {
+      "id": "packages",
+      "path": "packages",
+      "category": "container",
+      "purpose": "Canonical local npm packages and Rust protocol",
+      "required": false
+    },
+    {
+      "id": "payments",
+      "path": "payments",
+      "category": "placeholder",
+      "purpose": "Empty payments placeholder; actual payment protocol examples live under x402",
+      "required": false
+    },
+    {
+      "id": "perps",
+      "path": "Perps",
+      "category": "reference",
+      "purpose": "Independent perpetual trading implementations and reference programs",
+      "required": false,
+      "toolchain": [
+        "node",
+        "cargo"
+      ]
+    },
+    {
+      "id": "pinocchio",
+      "path": "pinocchio",
+      "category": "reference",
+      "purpose": "Pinocchio upstream, safe scaffold templates and p-token planning",
+      "required": false,
+      "toolchain": [
+        "cargo",
+        "node"
+      ]
+    },
+    {
+      "id": "plugin-delivery",
+      "path": "plugin.delivery",
+      "category": "reference",
+      "purpose": "Independent plugin registry monorepo",
+      "required": false,
+      "manifests": [
+        "package.json"
+      ],
+      "toolchain": [
+        "node",
+        "pnpm"
+      ]
+    },
+    {
+      "id": "programs",
+      "path": "programs",
+      "category": "optional",
+      "purpose": "Solana program workspace and generated clients",
+      "required": false,
+      "manifests": [
+        "Cargo.toml"
+      ],
+      "toolchain": [
+        "cargo",
+        "anchor"
+      ]
+    },
+    {
+      "id": "pump",
+      "path": "pump-fun",
+      "category": "reference",
+      "purpose": "Pump protocol documentation snapshot",
+      "required": false
+    },
+    {
+      "id": "python",
+      "path": "python",
+      "category": "optional",
+      "purpose": "Python trading/operator companion",
+      "required": false,
+      "manifests": [
+        "requirements.txt"
+      ],
+      "toolchain": [
+        "python"
+      ]
+    },
+    {
+      "id": "scripts",
+      "path": "scripts",
+      "category": "tooling",
+      "purpose": "Dependency-free workspace, audit, planning and setup tooling",
+      "required": false,
+      "toolchain": [
+        "node",
+        "bash"
+      ]
+    },
+    {
+      "id": "skills",
+      "path": "skills",
+      "category": "reference",
+      "purpose": "Operator skill catalog and embedded skill references",
+      "required": false
+    },
+    {
+      "id": "src",
+      "path": "src",
+      "category": "core",
+      "purpose": "Public SDK and CLI facade source",
+      "required": true
+    },
+    {
+      "id": "starter",
+      "path": "starter",
+      "category": "reference",
+      "purpose": "Starter project templates and environment examples",
+      "required": false
+    },
+    {
+      "id": "tailclawd",
+      "path": "tailclawd",
+      "category": "optional",
+      "purpose": "Remote terminal UI with worker quickstarts",
+      "required": false,
+      "manifests": [
+        "package.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ]
+    },
+    {
+      "id": "ultra",
+      "path": "ultra",
+      "category": "submodule",
+      "purpose": "Optional UltraThink skill submodule",
+      "required": false,
+      "submodule": true
+    },
+    {
+      "id": "vulcan",
+      "path": "vulcan-cli-master",
+      "category": "reference",
+      "purpose": "Independent Vulcan Rust CLI and plugin",
+      "required": false,
+      "manifests": [
+        "Cargo.toml"
+      ],
+      "toolchain": [
+        "cargo"
+      ]
+    },
+    {
+      "id": "x402",
+      "path": "x402",
+      "category": "optional",
+      "purpose": "Solana x402 SDK, payment examples and vault programs",
+      "required": false,
+      "toolchain": [
+        "node",
+        "cargo"
+      ]
+    },
+    {
+      "id": "agentwallet",
+      "path": "packages/agentwallet",
+      "category": "optional",
+      "purpose": "Local wallet vault package",
+      "required": false,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      }
+    },
+    {
+      "id": "clawd-sdk",
+      "path": "packages/clawd-sdk",
+      "category": "optional",
+      "purpose": "Token, agent and protocol SDK",
+      "required": false,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      }
+    },
+    {
+      "id": "clawd-wallet",
+      "path": "packages/clawd-wallet",
+      "category": "optional",
+      "purpose": "Wallet wrapper package",
+      "required": false,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      }
+    },
+    {
+      "id": "clawd-perps",
+      "path": "packages/clawd-perps",
+      "category": "optional",
+      "purpose": "Perpetual CLI, harness and adapters",
+      "required": false,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      }
+    },
+    {
+      "id": "perps-aggregator",
+      "path": "packages/clawd-perps-aggregator",
+      "category": "optional",
+      "purpose": "Perpetual venue scoring and quote aggregation",
+      "required": false,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      }
+    },
+    {
+      "id": "clawd",
+      "path": "packages/clawd",
+      "category": "optional",
+      "purpose": "Agent command package",
+      "required": false,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [
+        "sdk"
+      ],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      }
+    },
+    {
+      "id": "standalone",
+      "path": "packages/cli-standalone",
+      "category": "optional",
+      "purpose": "Standalone CLI runtime wrapper",
+      "required": false,
+      "manifests": [
+        "package.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [
+        "clawd"
+      ],
+      "tasks": {
+        "build": "build"
+      }
+    },
+    {
+      "id": "clawd-protocol",
+      "path": "packages/clawd-protocol",
+      "category": "optional",
+      "purpose": "Anchor protocol program",
+      "required": false,
+      "manifests": [
+        "Cargo.toml"
+      ],
+      "toolchain": [
+        "cargo",
+        "anchor"
+      ]
+    },
+    {
+      "id": "tee-terminal",
+      "path": "attestation/tee-terminal",
+      "category": "optional",
+      "purpose": "Optional TEE terminal session server",
+      "required": false,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      },
+      "runtime": {
+        "connectsTo": [
+          "attestation"
+        ]
+      }
+    },
+    {
+      "id": "private-inference",
+      "path": "attestation/inference",
+      "category": "optional",
+      "purpose": "Private inference provider client",
+      "required": false,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      },
+      "runtime": {
+        "connectsTo": [
+          "attestation"
+        ]
+      }
+    },
+    {
+      "id": "agent-router",
+      "path": "attestation/agent-router",
+      "category": "optional",
+      "purpose": "Attested agent registry and route selection",
+      "required": false,
+      "manifests": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "toolchain": [
+        "node",
+        "npm"
+      ],
+      "buildAfter": [],
+      "tasks": {
+        "check": "typecheck",
+        "build": "build"
+      },
+      "runtime": {
+        "connectsTo": [
+          "attestation"
+        ]
+      }
+    },
+    {
+      "id": "percolator-upstream",
+      "path": "llm_oracle/upstream/percolator",
+      "category": "submodule",
+      "purpose": "Percolator upstream Rust reference",
+      "required": false,
+      "submodule": true
+    },
+    {
+      "id": "percolator-match-upstream",
+      "path": "llm_oracle/upstream/percolator-match",
+      "category": "submodule",
+      "purpose": "Percolator matching engine reference",
+      "required": false,
+      "submodule": true
+    },
+    {
+      "id": "percolator-prog-upstream",
+      "path": "llm_oracle/upstream/percolator-prog",
+      "category": "submodule",
+      "purpose": "Percolator Solana program reference",
+      "required": false,
+      "submodule": true
+    },
+    {
+      "id": "pay",
+      "path": "pay",
+      "category": "submodule",
+      "purpose": "Optional payment SDK submodule",
+      "required": false,
+      "submodule": true
+    },
+    {
+      "id": "public-project",
+      "path": "my-project-public",
+      "category": "submodule",
+      "purpose": "User-managed optional Gitlawb submodule",
+      "required": false,
+      "submodule": true
+    },
+    {
+      "id": "public-project-fresh",
+      "path": "my-project-public-fresh",
+      "category": "submodule",
+      "purpose": "User-managed optional Gitlawb submodule",
+      "required": false,
+      "submodule": true
+    }
+  ]
+}

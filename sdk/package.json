@@ -1,7 +1,7 @@
 {
   "name": "@openclawdsolana/leviathan",
   "version": "0.2.0",
-  "description": "OpenClawd — Sovereign AI Lobster Runtime on Solana — $CLAWD: 8cHzQHUS2s2h8TzCmfqPKYiM4dSt4roa3n7MyRLApump",
+  "description": "OpenClawd \u2014 Sovereign AI Lobster Runtime on Solana \u2014 $CLAWD: 8cHzQHUS2s2h8TzCmfqPKYiM4dSt4roa3n7MyRLApump",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -128,7 +128,7 @@
     "harness:packages": "node scripts/verify-package-harness.mjs",
     "one-shot:install": "npm install --legacy-peer-deps && npm run harness:packages",
     "skills:sync": "node scripts/sync-skills.mjs",
-    "hermes": "echo '🦞 HERMES Terminal — launch via: clawd (TUI) or node dist/index.js --run' && node dist/index.js --run",
+    "hermes": "echo '\ud83e\udd9e HERMES Terminal \u2014 launch via: clawd (TUI) or node dist/index.js --run' && node dist/index.js --run",
     "start": "node dist/index.js",
     "demo:ooda": "npx tsx examples/ooda-loop.ts",
     "demo:paysh": "npx tsx examples/x402-payment-demo.ts",
@@ -171,7 +171,8 @@
     "automation:ci": "npm run check && npm run build",
     "automation:full": "npm run build && node dist/index.js --spawn && node dist/index.js --run",
     "examples:list": "npx tsx -e \"console.log('Available examples: ooda, paysh, a2a, dark-defi, buddies, lobtrader, listen, wallet, orch, research');\"",
-    "examples:run": "echo 'Usage: npm run demo:<name>  e.g. npm run demo:ooda'"
+    "examples:run": "echo 'Usage: npm run demo:<name>  e.g. npm run demo:ooda'",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@metaplex-foundation/mpl-agent-registry": "^0.2.5",
