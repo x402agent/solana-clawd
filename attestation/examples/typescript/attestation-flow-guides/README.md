@@ -20,7 +20,7 @@ Additionally, Solana Kit examples are provided in `src/kit`.
 Clone the repository and install dependencies:
 
 ```bash
-git clone https://github.com/solana-foundation/solana-attestation-service
+git clone https://github.com/Solizardking/clawd-attestation
 cd examples/typescript/attestation-flow-guides
 pnpm install
 ```

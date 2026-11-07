@@ -3,16 +3,20 @@
   "version": "1.0.7",
   "main": "index.js",
   "description": "Solana Attestation Service",
-  "repository": "git@github.com:solana-foundation/solana-attestation-service.git",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Solizardking/clawd-attestation.git"
+  },
   "license": "MIT",
   "scripts": {
     "generate-clients": "node ./scripts/generate-clients.js",
     "generate-idl": "shank idl -r program -o idl",
-    "qedgen:spec": "printf '%s\n' 'QEDGen entrypoint: use attestation/idl/solana_attestation_service.json and attestation/formal_verification/SPEC.md as the canonical SAS proof target.'",
+    "qedgen:spec": "printf '%s\n' 'QEDGen entrypoint: use idl/solana_attestation_service.json and formal_verification/SPEC.md as the canonical SAS proof target.'",
     "qedgen:build": "cd formal_verification && lake build",
     "verify:agent-template": "npx tsx ../formal_verification/gate.ts verify --path ../agents/agent-template-attested.json",
 
     "tee:install":    "cd tee-terminal && npm install",
+    "tee:demo":       "cd tee-terminal && npm test",
     "tee:build":      "cd tee-terminal && npm run build",
     "tee:server":     "cd tee-terminal && npm run dev:server",
     "tee:cli":        "cd tee-terminal && npm run dev:cli",

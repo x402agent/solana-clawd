@@ -81,6 +81,8 @@ import { getFederationBridge, type FederationBridge } from "./federation/federat
 import { getAgentTaskRouter, type AgentTaskRouter } from "./federation/agent-task-router.js";
 import { getDocsSystem, type DocsSystem } from "./docs/docs-system.js";
 
+export const SERVER_VERSION = "3.0.0";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
@@ -705,7 +707,7 @@ async function buildOrchestrator(
         },
         facilitatorAttached: !!facilitator,
         pTokenSavings: facilitator ? meter.getSavings() : { cuSaved: 0, transferCount: 0, usdcEquiv: "0" },
-        version: "3.0.0",
+        version: SERVER_VERSION,
       };
     });
 
@@ -731,7 +733,7 @@ export async function createServer(): Promise<Server> {
   const orch = await buildOrchestrator(meter, facilitator);
 
   const server = new Server(
-    { name: "solana-clawd", version: "3.0.0" },
+    { name: "solana-clawd", version: SERVER_VERSION },
     { capabilities: { tools: {}, resources: {}, prompts: {} } },
   );
 
@@ -861,7 +863,7 @@ export async function createServer(): Promise<Server> {
         const result = await orch.dispatch(req.params.name, req.params.arguments ?? {}, meter);
         return text(result);
       } catch (err) {
-        return text(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        return { ...text(`Error: ${err instanceof Error ? err.message : String(err)}`), isError: true };
       }
     },
   );

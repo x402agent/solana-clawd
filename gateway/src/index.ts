@@ -2,8 +2,8 @@
 /**
  * CLAWD Gateway — Telegram bot + HTTP API with Solana/Helius/Birdeye access.
  *
- * Start:  node dist/index.js
- * Env:    See ../.env for configuration
+ * Start:  npm --prefix gateway start
+ * Env:    Use the root stack supervisor to load ../.env, or export configuration
  */
 import 'dotenv/config';
 import express from 'express';
@@ -415,15 +415,15 @@ bot.onMessage(async (msg, text) => {
 // ---------------------------------------------------------------------------
 async function main(): Promise<void> {
   // Start HTTP gateway
-  app.listen(PORT, () => {
+  app.listen(PORT, process.env.GATEWAY_HOST || '0.0.0.0', () => {
     console.log(`[Gateway] HTTP API listening on :${PORT}`);
   });
 
-  // Connect Birdeye WebSocket
-  birdeye.connect();
-
-  // Start Telegram bot
-  await bot.start();
+  // Background integrations are opt-in so local stack startup only starts HTTP.
+  if (process.env.GATEWAY_BACKGROUND_ENABLED === 'true') {
+    birdeye.connect();
+    await bot.start();
+  }
 }
 
 main().catch((err) => {

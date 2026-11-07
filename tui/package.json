@@ -14,7 +14,8 @@
     "build": "tsc -p tsconfig.json",
     "dev": "node --env-file-if-exists .env --import tsx/esm src/index.ts",
     "start": "node --env-file-if-exists .env dist/index.js",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@metaplex-foundation/mpl-agent-registry": "^0.2.5",

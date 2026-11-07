@@ -9,30 +9,9 @@
     "rootDir": "./src",
     "noEmitOnError": true,
     "stripInternal": true,
-    "noFallthroughCasesInSwitch": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": false
   },
-  "include": [],
-  "files": [
-    "src/index.ts",
-    "src/agents/built-in-agents.ts",
-    "src/animations/birth-ceremony.ts",
-    "src/animations/clawd-frames.ts",
-    "src/animations/index.ts",
-    "src/animations/spinner.ts",
-    "src/buddy/blockchain-sprites.ts",
-    "src/buddy/blockchain-types.ts",
-    "src/buddy/blockchain-wallet.ts",
-    "src/buddy/index.ts",
-    "src/buddy/sprites.ts",
-    "src/buddy/types.ts",
-    "src/entrypoints/clawd.ts",
-    "src/metaplex/agent-minter.ts",
-    "src/metaplex/agent-registry.ts",
-    "src/metaplex/index.ts",
-    "src/metaplex/metaplex-types.ts",
-    "src/state/app-state.ts",
-    "src/state/store.ts"
-  ]
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts"]
 }

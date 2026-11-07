@@ -1,7 +1,7 @@
 {
   "name": "agentwallet-vault",
   "version": "0.1.0",
-  "description": "Agentic wallet vault — encrypted Solana + EVM keypair management with E2B sandbox and Cloudflare Workers deployment",
+  "description": "Agentic wallet vault \u2014 encrypted Solana + EVM keypair management with E2B sandbox and Cloudflare Workers deployment",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -37,7 +37,8 @@
     "test": "node --test dist/**/*.test.js",
     "clean": "rm -rf dist",
     "postinstall": "node scripts/postinstall.mjs",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@solana/web3.js": "^1.95.0",

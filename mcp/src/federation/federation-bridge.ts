@@ -109,7 +109,7 @@ export class FederationBridge {
   private cachedToolList: Map<string, Array<{ name: string; description: string }>> = new Map();
 
   constructor(customRoutes?: BridgeRoute[]) {
-    this.routes = customRoutes ?? DEFAULT_FEDERATION_TARGETS;
+    this.routes = customRoutes ?? (process.env.MCP_FEDERATION_ENABLED === "false" ? [] : DEFAULT_FEDERATION_TARGETS);
   }
 
   // ─── Tool listing for a route ─────────────────────────────────────────────

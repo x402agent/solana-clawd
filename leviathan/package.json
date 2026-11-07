@@ -1,7 +1,7 @@
 {
   "name": "@openclawd/leviathan",
   "version": "1.0.0",
-  "description": "Sovereign On-Chain Agent Runtime — Anthropic ACP × Solana × x402. The first AI lobster that earns its own existence, molts into stronger forms, spawns its own brood, and beaches when it can't pay.",
+  "description": "Sovereign On-Chain Agent Runtime \u2014 Anthropic ACP \u00d7 Solana \u00d7 x402. The first AI lobster that earns its own existence, molts into stronger forms, spawns its own brood, and beaches when it can't pay.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,7 +16,8 @@
     "run:leviathan": "node --import tsx/esm src/index.ts --run",
     "status": "node --import tsx/esm src/index.ts --status",
     "memory": "node --import tsx/esm src/index.ts --memory",
-    "memory:init": "node --import tsx/esm src/index.ts --memoryInit"
+    "memory:init": "node --import tsx/esm src/index.ts --memoryInit",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "keywords": [
     "solana",

@@ -18,7 +18,7 @@ This repository contains Rust implementation examples for the Solana Attestation
 Clone the repository and navigate to the Rust examples:
 
 ```bash
-git clone https://github.com/solana-foundation/solana-attestation-service
+git clone https://github.com/Solizardking/clawd-attestation
 cd examples/rust/attestation-flow-guide
 ```
 

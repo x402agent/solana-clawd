@@ -1,7 +1,8 @@
 {
   "name": "sas-lib-ts",
   "version": "1.0.10",
-  "repository": "git@github.com:solana-foundation/solana-attestation-service.git",
+  "repository": "https://github.com/Solizardking/clawd-attestation.git",
+  "license": "MIT",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "files": [

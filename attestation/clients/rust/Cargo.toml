@@ -4,7 +4,7 @@ version = "1.0.9"
 edition = "2021"
 description = "Rust client for the Solana Attestation Service"
 license = "MIT"
-repository = "https://github.com/solana-foundation/solana-attestation-service"
+repository = "https://github.com/Solizardking/clawd-attestation"
 
 [dependencies]
 borsh = { workspace = true }

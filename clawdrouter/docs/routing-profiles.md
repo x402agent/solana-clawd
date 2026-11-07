@@ -15,9 +15,9 @@ Routes every request to the cheapest model that can handle it. Ideal for batch p
 | Tier | Model | Cost/request |
 |------|-------|-------------|
 | SIMPLE | nvidia/gpt-oss-120b | **FREE** |
-| MEDIUM | google/gemini-2.5-flash-lite | $0.0003 |
+| MEDIUM | deepseek/deepseek-v4-flash | Registry estimate |
 | COMPLEX | google/gemini-2.5-flash-lite | $0.0003 |
-| REASONING | xai/grok-4-1-fast | $0.0004 |
+| REASONING | deepseek/deepseek-v4-pro | Registry estimate |
 
 ### ⚡ AUTO — Balanced (Default)
 
@@ -60,7 +60,7 @@ Requests are classified into 4 tiers based on 15-dimension scoring:
 
 - **Reasoning override**: If reasoning or math score > 0.7 → always REASONING tier
 - **Vision override**: If vision score > 0.8 → always COMPLEX tier (needs capable model)
-- **Excluded models**: If primary model is excluded, fallback finds next best in tier
+- **Excluded models**: If primary model is excluded, fallback finds the next allowed model in the tier. If none remain, routing fails without restoring an excluded model.
 
 ## Quick Commands
 

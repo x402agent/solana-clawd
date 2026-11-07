@@ -29,14 +29,11 @@ import {
   revokeSkill,
   loadCatalog,
   ComponentKind,
+  SKILLS_ROOT,
 } from '../../formal_verification/skill-hub.js';
 
 const router = Router();
 
-const SKILLS_ROOT = path.resolve(
-  new URL(import.meta.url).pathname,
-  '../../../skills',
-);
 
 const metadataRouteLimiter = rateLimit({
   windowMs: 60 * 1000,

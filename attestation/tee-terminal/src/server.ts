@@ -1,6 +1,6 @@
 import WebSocket, { WebSocketServer } from 'ws';
 import { IncomingMessage } from 'http';
-import * as dotenv from 'dotenv';
+import { loadAttestationEnv } from './load-env';
 import { TeeSessionManager } from './session';
 import { CommandRouter } from './router';
 import { encrypt, decrypt } from './crypto';
@@ -12,7 +12,7 @@ import type {
   TeeConfig,
 } from './types';
 
-dotenv.config();
+loadAttestationEnv();
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -39,7 +39,7 @@ const commandRouter = new CommandRouter(config);
 
 // ─── WebSocket Server ─────────────────────────────────────────────────────────
 
-const wss = new WebSocketServer({ port: config.port });
+const wss = new WebSocketServer({ port: config.port, host: process.env.TEE_HOST || '127.0.0.1' });
 
 console.log(`╔═══════════════════════════════════════════════════╗`);
 console.log(`║  CLAWD TEE Terminal Server v0.1.0                 ║`);
@@ -103,20 +103,20 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
           encryptedSend('ready', sessionKey!, readyPayload, msg.seq);
           console.log(
             `[${sessionId!.slice(0, 8)}] Handshake complete — attested: ` +
-            `${readyPayload.attestationAddress.slice(0, 8)}...`,
+            `${readyPayload.attestationAddress.slice(0, 8)}... mode=${readyPayload.demoMode ? 'demo' : 'live'}`,
           );
           break;
         }
 
         case 'command': {
           const session = sessionManager.getSession(sessionId!);
-          if (!session?.sessionKey) { sendError('Session not ready', msg.seq); return; }
+          if (!session?.isActive || !session.sessionKey) { sendError('Session not ready', msg.seq); return; }
 
           const encMsg = msg.payload as EncryptedMessage;
           const commandBytes = decrypt(session.sessionKey, encMsg);
           const command = commandBytes.toString('utf8');
 
-          console.log(`[${sessionId!.slice(0, 8)}] cmd: ${command.slice(0, 60)}${command.length > 60 ? '...' : ''}`);
+          console.log(`[${sessionId!.slice(0, 8)}] Encrypted command received`);
 
           const result = await commandRouter.route(session, command);
           encryptedSend('response', session.sessionKey, result, msg.seq);

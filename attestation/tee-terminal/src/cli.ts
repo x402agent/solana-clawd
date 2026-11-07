@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 import * as readline from 'readline';
-import * as dotenv from 'dotenv';
+import { loadAttestationEnv } from './load-env';
 import { generateX25519KeyPair, deriveSessionKey, encrypt, decrypt } from './crypto';
 import type {
   WireMessage,
@@ -10,7 +10,7 @@ import type {
   CommandResult,
 } from './types';
 
-dotenv.config();
+loadAttestationEnv();
 
 // ─── ANSI helpers ─────────────────────────────────────────────────────────────
 
@@ -94,8 +94,13 @@ function printResult(result: CommandResult): void {
     console.log('\n' + result.output + '\n');
   }
 
-  if (result.inferenceId) {
+  if (result.modelId || result.inferenceId) {
     console.log(dim(rule('─')));
+  }
+  if (result.modelId) {
+    console.log(dim(`  Model:        ${result.modelId}`));
+  }
+  if (result.inferenceId) {
     console.log(dim(`  Inference ID: ${result.inferenceId}`));
     if (result.promptHash) {
       console.log(dim(`  Prompt Hash:  ${result.promptHash.slice(0, 32)}...`));
@@ -106,6 +111,8 @@ function printResult(result: CommandResult): void {
     if (result.attestationAddress) {
       console.log(dim(`  Attestation:  ${result.attestationAddress.slice(0, 16)}...`));
     }
+  }
+  if (result.modelId || result.inferenceId) {
     console.log(dim(rule('─')));
     console.log();
   }

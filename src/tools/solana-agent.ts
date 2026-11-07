@@ -17,6 +17,7 @@
  *   const result = await solanaAgentLoop({ wallet, rpc, dryRun: true })
  */
 
+import { Connection } from '@solana/web3.js';
 import type { ChatCompletionTool } from 'openai/resources/chat/completions.js';
 import { resolveOpenAIClient, thinkingCall } from '../providers/deepseek.js';
 
@@ -287,7 +288,7 @@ export interface ToolContext {
 
 export interface ToolResult {
   success: boolean;
-  data: unknown;
+  data?: unknown;
   error?: string;
 }
 
@@ -309,7 +310,8 @@ async function handleJupiter(name: string, input: Record<string, unknown>, dryRu
   // jupiter_swap
   if (dryRun) {
     const res = await fetch(quoteUrl, { signal: AbortSignal.timeout(10_000) });
-    const quote = res.ok ? await res.json() : { error: `Jupiter ${res.status}` };
+    if (!res.ok) return { success: false, error: `Jupiter quote ${res.status}` };
+    const quote = await res.json();
     return { success: true, data: { dryRun: true, quote, note: 'swap not broadcast in dry-run mode' } };
   }
   return { success: false, error: 'Live swaps require keypair integration — use dry-run for now' };
@@ -320,8 +322,9 @@ async function heliusPortfolio(wallet: string, apiKey: string, limit: number): P
     fetch(`https://api.helius.xyz/v0/addresses/${wallet}/balances?api-key=${apiKey}`, { signal: AbortSignal.timeout(10_000) }),
     fetch(`https://api.helius.xyz/v0/addresses/${wallet}/transactions?api-key=${apiKey}&limit=${limit}`, { signal: AbortSignal.timeout(10_000) }),
   ]);
-  const balances = solRes.ok ? await solRes.json() : { error: String(solRes.status) };
-  const txs = txRes.ok ? await txRes.json() : { error: String(txRes.status) };
+  if (!solRes.ok || !txRes.ok) return { success: false, error: `Helius portfolio balances=${solRes.status} transactions=${txRes.status}` };
+  const balances = await solRes.json();
+  const txs = await txRes.json();
   return { success: true, data: { balances, recentTxs: Array.isArray(txs) ? txs.slice(0, 5) : txs } };
 }
 
@@ -366,10 +369,9 @@ async function handleHelius(name: string, input: Record<string, unknown>, ctx: T
 async function handleOre(name: string, input: Record<string, unknown>, rpc: string, dryRun: boolean): Promise<ToolResult> {
   if (name === 'ore_board_status') {
     try {
-      const { readBoardState } = await import('../../agents/ore-miner/src/rpc.js') as {
-        readBoardState: (r: string) => Promise<unknown>
-      };
-      return { success: true, data: await readBoardState(rpc) };
+      const target = new URL('../../agents/ore-miner/dist/rpc.js', import.meta.url).href;
+      const { getBoard } = await import(target);
+      return { success: true, data: await getBoard(new Connection(rpc)) };
     } catch (e) {
       return { success: false, error: `ore_board_status: ${String(e).slice(0, 100)}` };
     }
@@ -377,10 +379,9 @@ async function handleOre(name: string, input: Record<string, unknown>, rpc: stri
 
   if (name === 'ore_round_analysis') {
     try {
-      const { readRoundState } = await import('../../agents/ore-miner/src/rpc.js') as {
-        readRoundState: (r: string, id: bigint) => Promise<unknown>
-      };
-      return { success: true, data: await readRoundState(rpc, BigInt(input.roundId as number)) };
+      const target = new URL('../../agents/ore-miner/dist/rpc.js', import.meta.url).href;
+      const { getRound } = await import(target);
+      return { success: true, data: await getRound(new Connection(rpc), BigInt(input.roundId as number)) };
     } catch (e) {
       return { success: false, error: `ore_round_analysis: ${String(e).slice(0, 100)}` };
     }
@@ -414,14 +415,16 @@ async function handlePerps(name: string, input: Record<string, unknown>, ctx: To
     if (protocol === 'phoenix') {
       return phoenixQuery(name, input.market as string, (input.wallet as string | undefined) ?? ctx.wallet);
     }
-    return percolatorQuery(name, input.market as string);
+    if (protocol !== 'percolator') return { success: false, error: `Unsupported perps protocol: ${protocol}` };
+    return percolatorQuery(name, input.market as string, (input.wallet as string | undefined) ?? ctx.wallet);
   } catch (e) {
     return { success: false, error: `${name}: ${String(e).slice(0, 100)}` };
   }
 }
 
 async function phoenixQuery(name: string, market: string, wallet?: string): Promise<ToolResult> {
-  const { VulcanClient } = await import('../../leviathan/src/agent/vulcan.js') as {
+  const target = new URL('../../leviathan/dist/agent/vulcan.js', import.meta.url).href;
+  const { VulcanClient } = await import(target) as {
     VulcanClient: {
       markets: () => Promise<unknown>;
       fundingRate: (m: string) => Promise<unknown>;
@@ -433,13 +436,19 @@ async function phoenixQuery(name: string, market: string, wallet?: string): Prom
   return { success: true, data: await VulcanClient.positions(wallet) };
 }
 
-async function percolatorQuery(name: string, market: string): Promise<ToolResult> {
-  const { Percolator } = await import('../../leviathan/src/agent/percolator.js') as {
+async function percolatorQuery(name: string, market: string, wallet?: string): Promise<ToolResult> {
+  const target = new URL('../../leviathan/dist/agent/percolator.js', import.meta.url).href;
+  const { Percolator } = await import(target) as {
     Percolator: {
       listMarkets: () => Promise<unknown>;
       fundingRate: (m: string) => Promise<unknown>;
+      getPosition: (w: string) => Promise<unknown>;
     }
   };
+  if (name === 'perps_positions') {
+    if (!wallet) return { success: false, error: 'wallet required' };
+    return { success: true, data: await Percolator.getPosition(wallet) };
+  }
   if (name === 'perps_funding_rate') return { success: true, data: await Percolator.fundingRate(market) };
   return { success: true, data: await Percolator.listMarkets() };
 }
@@ -448,7 +457,8 @@ async function percolatorQuery(name: string, market: string): Promise<ToolResult
 
 export async function execTool(name: string, input: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
   const rpc    = (input.rpc as string | undefined) ?? ctx.rpc;
-  const dryRun = (input.dryRun as boolean | undefined) ?? ctx.dryRun ?? false;
+  // Tool arguments cannot override a host-selected dry run. Default to simulation.
+  const dryRun = ctx.dryRun !== false || input.dryRun === true;
 
   try {
     if (name === 'jupiter_quote' || name === 'jupiter_swap')               return handleJupiter(name, input, dryRun);
@@ -500,10 +510,10 @@ async function runOneTurn(
     tools: ALL_SOLANA_TOOLS,
     tool_choice: 'auto',
     ...(useThinking ? { extra_body: { thinking: { type: 'enabled' }, reasoning_effort: 'high' } } : {}),
-  } as Parameters<typeof client.chat.completions.create>[0]);
+  } as import('openai/resources/chat/completions.js').ChatCompletionCreateParamsNonStreaming);
 
   const msg = response.choices[0]?.message;
-  const reasoning = (msg as unknown as { reasoning_content?: string }).reasoning_content ?? null;
+  const reasoning = (msg as unknown as { reasoning_content?: string } | undefined)?.reasoning_content ?? null;
   const toolCall = msg?.tool_calls?.[0];
 
   if (!toolCall) {
@@ -512,6 +522,12 @@ async function runOneTurn(
 
   const fn = (toolCall as unknown as { function: { name: string; arguments: string } }).function;
   const toolResult = await execTool(fn.name, JSON.parse(fn.arguments) as Record<string, unknown>, ctx);
+
+  messages.push({ role: 'assistant', content: msg.content, tool_calls: [toolCall] });
+  messages.push({
+    role: 'tool', tool_call_id: toolCall.id,
+    content: JSON.stringify(toolResult, (_key, value) => typeof value === 'bigint' ? value.toString() : value),
+  });
 
   const TERMINAL = new Set(['jupiter_swap', 'ore_deploy', 'perps_open_position', 'perps_close_position', 'hold']);
 
@@ -582,9 +598,7 @@ export async function solanaAgentLoop(opts: AgentLoopOptions): Promise<AgentLoop
 
     if (turn.done) break;
 
-    // Append assistant + tool result for the next turn
-    messages.push({ role: 'assistant', content: '' });
-    messages.push({ role: 'user', content: `Tool result for ${turn.toolName}:\n${JSON.stringify(turn.result)}` });
+    // runOneTurn appends the provider's tool call and matching tool result.
   }
 
   return { action: lastAction, toolsCalled, reasoning: lastReasoning, result: lastResult, provider: provider.name, model };
@@ -685,4 +699,4 @@ export async function perpsMarketAnalysis(
 // ── Exports for external consumers ───────────────────────────────────────────
 
 export { ALL_SOLANA_TOOLS, JUPITER_TOOLS, HELIUS_TOOLS, ORE_TOOLS, PERPS_TOOLS };
-export type { ToolContext, ToolResult };
+

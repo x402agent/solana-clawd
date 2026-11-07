@@ -3,7 +3,7 @@
 
 FROM node:22-alpine AS builder
 
-WORKDIR /app
+WORKDIR /app/mcp
 
 # Copy package files and install deps
 COPY mcp/package.json mcp/package-lock.json mcp/tsconfig.json ./
@@ -16,20 +16,20 @@ RUN npm run build
 # ─── Runtime ──────────────────────────────────────────────────────────────────
 FROM node:22-alpine
 
-WORKDIR /app
+WORKDIR /app/mcp
 
 # Copy only production deps
 COPY mcp/package.json mcp/package-lock.json ./
 RUN npm ci --omit=dev
 
 # Copy built dist
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/mcp/dist ./dist
 
 # Copy SOUL.md and skills directory (for MCP resources)
-COPY SOUL.md ./SOUL.md
-COPY skills ./skills
-COPY src ./src
-COPY README.md ./README.md
+COPY SOUL.md /app/SOUL.md
+COPY skills /app/skills
+COPY src /app/src
+COPY README.md /app/README.md
 
 # Environment defaults
 ENV PORT=3000
