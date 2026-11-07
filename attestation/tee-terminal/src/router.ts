@@ -1,5 +1,6 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { completeWithNeon, shouldUseNeon, type NeonCompletion } from './neon';
 import type { ParsedCommand, CommandResult, TeeSession, TeeConfig } from './types';
 
 const execFileAsync = promisify(execFile);
@@ -108,6 +109,12 @@ export class CommandRouter {
   private async routeAI(session: TeeSession, cmd: ParsedCommand): Promise<CommandResult> {
     if (!cmd.content.trim()) return { output: 'Usage: !ai <prompt>', exitCode: 1 };
 
+    // Default prompt and `!ai` go through Neon when the gateway env is set.
+    // Explicit `!ai --claude` / `!ai --openai` keep the adapters below.
+    if (shouldUseNeon(cmd.raw)) {
+      return this.neonAiCall(cmd);
+    }
+
     // Delegate to the inference service
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -151,7 +158,111 @@ export class CommandRouter {
     }
   }
 
+  private async neonAiCall(cmd: ParsedCommand): Promise<CommandResult> {
+    const start = Date.now();
+    try {
+      const completion = await completeWithNeon(cmd.content);
+      const recorded = await this.attachDemoRecord(cmd.content, completion, Date.now() - start);
+      return {
+        output: completion.text,
+        modelId: completion.modelId,
+        exitCode: 0,
+        durationMs: Date.now() - start,
+        demoMode: this.config.demoMode,
+        ...recorded,
+      };
+    } catch (err: unknown) {
+      return { output: `AI error: ${(err as Error).message}`, exitCode: 1 };
+    }
+  }
+
+  /**
+   * Demo-mode hash attestation for a Neon completion. Keeps the existing
+   * on-chain demo record path without replacing the model text with the echo.
+   */
+  private async attachDemoRecord(
+    prompt: string,
+    completion: NeonCompletion,
+    durationMs: number,
+  ): Promise<Pick<CommandResult, 'inferenceId' | 'promptHash' | 'responseHash' | 'attestationAddress'>> {
+    if (!this.config.demoMode) return {};
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { v4: uuidv4 } = require('uuid') as { v4: () => string };
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { buildPrivateRecord } = require('../../inference/src/privacy') as {
+        buildPrivateRecord: (
+          inferenceId: string,
+          req: { prompt: string },
+          response: string,
+          model: string,
+          provider: string,
+          durationMs: number,
+        ) => { record: { inferenceId: string; promptHash: string; responseHash: string; timestamp: number } };
+      };
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { recordInferenceOnChain } = require('../../inference/src/chain') as {
+        recordInferenceOnChain: (
+          attestation: {
+            inferenceId: string;
+            modelPubkey: string;
+            promptHash: Buffer;
+            responseHash: Buffer;
+            timestamp: bigint;
+            isVerified: boolean;
+          },
+          config: {
+            solanaRpcUrl: string;
+            network: TeeConfig['network'];
+            sasProgram: string;
+            demoMode: boolean;
+            defaultProvider: string;
+            defaultModel: string;
+          },
+        ) => Promise<{ attestationAddress: string }>;
+      };
+      const inferenceId = uuidv4();
+      const { record } = buildPrivateRecord(
+        inferenceId,
+        { prompt },
+        completion.text,
+        completion.modelId,
+        'claude',
+        durationMs,
+      );
+      const attestation = await recordInferenceOnChain(
+        {
+          inferenceId,
+          modelPubkey: '11111111111111111111111111111111',
+          promptHash: Buffer.from(record.promptHash, 'hex'),
+          responseHash: Buffer.from(record.responseHash, 'hex'),
+          timestamp: BigInt(record.timestamp),
+          isVerified: false,
+        },
+        {
+          solanaRpcUrl: this.config.solanaRpcUrl,
+          network: this.config.network,
+          sasProgram: this.config.sasProgram,
+          demoMode: true,
+          defaultProvider: 'claude',
+          defaultModel: completion.modelId,
+        },
+      );
+      return {
+        inferenceId: record.inferenceId,
+        promptHash: record.promptHash,
+        responseHash: record.responseHash,
+        attestationAddress: attestation.attestationAddress,
+      };
+    } catch {
+      return {};
+    }
+  }
+
   private async directAiCall(cmd: ParsedCommand): Promise<CommandResult> {
+    // Same Neon completion as the default path, including this no-key fallback.
+    if (shouldUseNeon(cmd.raw)) return this.neonAiCall(cmd);
+
     const provider = cmd.provider ?? 'claude';
     const apiKey = provider === 'openai' ? this.config.openaiApiKey : this.config.claudeApiKey;
     if (!apiKey) {

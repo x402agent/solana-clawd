@@ -1,6 +1,6 @@
 import WebSocket, { WebSocketServer } from 'ws';
 import { IncomingMessage } from 'http';
-import * as dotenv from 'dotenv';
+import { loadAttestationEnv } from './load-env';
 import { TeeSessionManager } from './session';
 import { CommandRouter } from './router';
 import { encrypt, decrypt } from './crypto';
@@ -12,7 +12,7 @@ import type {
   TeeConfig,
 } from './types';
 
-dotenv.config();
+loadAttestationEnv();
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 

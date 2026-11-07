@@ -83,6 +83,8 @@ export interface CommandResult {
   responseHash?: string;
   durationMs?: number;
   demoMode?: boolean;
+  /** Model id reported by the completion the server actually called. */
+  modelId?: string;
 }
 
 // ─── Config ─────────────────────────────────────────────────────────────────
