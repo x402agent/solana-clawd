@@ -1,8 +1,8 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 
-/** `attestation/.env`, whether this file is loaded from `src/` or `dist/`. */
+/** Repository-root `.env`, whether this file is loaded from `src/` or `dist/`. */
 export function attestationEnvPath(): string {
   return path.resolve(__dirname, '../../.env');
 }
@@ -22,11 +22,13 @@ export function stripEnvValue(value: string): string {
 }
 
 /**
- * Load `attestation/.env` into `process.env`. File values win over inherited
- * shell values so the tee server and CLI see one env, not a second default.
+ * Load the repository-root `.env` into `process.env`. Missing file is the
+ * zero-secret demo path. File values win over inherited shell values.
  */
 export function loadAttestationEnv(): void {
-  const parsed = dotenv.parse(readFileSync(attestationEnvPath()));
+  const envPath = attestationEnvPath();
+  if (!existsSync(envPath)) return;
+  const parsed = dotenv.parse(readFileSync(envPath));
   for (const [key, value] of Object.entries(parsed)) {
     process.env[key] = stripEnvValue(value);
   }
