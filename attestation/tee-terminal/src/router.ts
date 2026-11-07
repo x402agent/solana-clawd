@@ -81,6 +81,9 @@ export class CommandRouter {
   }
 
   private async routeShell(command: string): Promise<CommandResult> {
+    if (process.env.TEE_ALLOW_SHELL !== 'true') {
+      return { output: 'Shell execution is disabled. Set TEE_ALLOW_SHELL=true to enable local shell commands.', exitCode: 1 };
+    }
     if (!command.trim()) return { output: '', exitCode: 0 };
     const start = Date.now();
     try {
@@ -108,12 +111,12 @@ export class CommandRouter {
     // Delegate to the inference service
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { PrivateInferenceService } = require('../../inference/src/index');
+      const { PrivateInferenceService } = require('../../inference/dist/index.js');
       const svc: {
         infer(prompt: string, options?: unknown): Promise<{
           response: string;
           record: { inferenceId: string; promptHash: string; responseHash: string };
-          attestation: { attestationAddress: string };
+          attestation: { attestationAddress: string; demoMode: boolean };
         }>;
       } = new PrivateInferenceService({
         solanaRpcUrl: this.config.solanaRpcUrl,
@@ -123,32 +126,52 @@ export class CommandRouter {
         openaiApiKey: this.config.openaiApiKey,
         demoMode: this.config.demoMode,
         defaultProvider: cmd.provider ?? 'claude',
-        defaultModel: cmd.model ?? 'claude-sonnet-4-6',
+        defaultModel: cmd.model ?? (cmd.provider === 'openai' ? 'gpt-4o' : 'claude-sonnet-4-6'),
       });
 
       const result = await svc.infer(cmd.content, {
         provider: cmd.provider,
         model: cmd.model,
       });
+      if (!this.config.demoMode && result.attestation.demoMode) {
+        throw new Error('Inference returned a demo attestation in live mode');
+      }
       return {
         output: result.response,
         inferenceId: result.record.inferenceId,
         promptHash: result.record.promptHash,
         responseHash: result.record.responseHash,
         attestationAddress: result.attestation.attestationAddress,
+        demoMode: result.attestation.demoMode,
       };
-    } catch {
-      // Fallback: direct Claude call if inference service not available
-      return this.directAiCall(cmd);
+    } catch (err: unknown) {
+      // Only explicit demo sessions may use the direct, unattested fallback.
+      if (this.config.demoMode) return this.directAiCall(cmd);
+      return { output: `Private inference unavailable: ${(err as Error).message}. Build attestation/inference first.`, exitCode: 1 };
     }
   }
 
   private async directAiCall(cmd: ParsedCommand): Promise<CommandResult> {
-    if (!this.config.claudeApiKey) {
-      return { output: '[demo] AI response to: ' + cmd.content, exitCode: 0 };
+    const provider = cmd.provider ?? 'claude';
+    const apiKey = provider === 'openai' ? this.config.openaiApiKey : this.config.claudeApiKey;
+    if (!apiKey) {
+      if (this.config.demoMode) return { output: '[demo] AI response to: ' + cmd.content, exitCode: 0, demoMode: true };
+      return { output: `${provider} API key is not configured`, exitCode: 1 };
     }
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
+      if (provider === 'openai') {
+        const start = Date.now();
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: cmd.model ?? 'gpt-4o', messages: [{ role: 'user', content: cmd.content }] }),
+          signal: AbortSignal.timeout(60_000),
+        });
+        if (!response.ok) return { output: `OpenAI returned HTTP ${response.status}`, exitCode: 1 };
+        const result = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+        return { output: result.choices?.[0]?.message?.content ?? '', durationMs: Date.now() - start, demoMode: true };
+      }
       const Anthropic = require('@anthropic-ai/sdk');
       const client = new Anthropic.default({ apiKey: this.config.claudeApiKey });
       const start = Date.now();
@@ -159,7 +182,7 @@ export class CommandRouter {
       });
       const text = msg.content.filter((b: { type: string }) => b.type === 'text')
         .map((b: { text: string }) => b.text).join('');
-      return { output: text, durationMs: Date.now() - start };
+      return { output: text, durationMs: Date.now() - start, demoMode: true };
     } catch (err: unknown) {
       return { output: `AI error: ${(err as Error).message}`, exitCode: 1 };
     }
@@ -169,7 +192,7 @@ export class CommandRouter {
     if (!cmd.agentId) return { output: 'Usage: !agent <agentId> <message>', exitCode: 1 };
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { AgentRouter } = require('../../agent-router/src/index');
+      const { AgentRouter } = require('../../agent-router/dist/index.js');
       const router: {
         route(req: unknown): Promise<{ endpoint: string; attestationAddress: string }>;
       } = new AgentRouter({
@@ -192,8 +215,9 @@ export class CommandRouter {
   }
 
   private routeSystem(session: TeeSession, subcommand: string): CommandResult {
-    if (subcommand === 'attest') {
+    if (subcommand === 'attest' || subcommand === 'status') {
       const lines = [
+        `Mode:                ${this.config.demoMode ? 'demo (no on-chain receipt)' : 'live'}`,
         `Session ID:          ${session.id}`,
         `Attestation Address: ${session.attestationAddress ?? 'pending...'}`,
         `User Pubkey:         ${session.userSolanaPubkey ?? 'unknown'}`,

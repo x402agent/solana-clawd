@@ -1,46 +1,22 @@
-# Repo Map
+# Repository map
 
-This repository contains both active development surfaces and preserved upstream/vendor trees. New contributors should start with the active surfaces below and treat the embedded trees as reference material unless a task explicitly targets them.
+Start with [the local workflow](WORKSPACE.md) and the machine-readable
+[component inventory](../workspace.components.json). Run `npm run workspace -- list`
+for the complete catalog and `npm run workspace:doctor` for current readiness.
 
-## Start Here
-
-- `README.md` — public project story and command overview
-- `STARTHERE.md` — onboarding and local run path
-- `SECURITY.md` — secret-handling and release constraints
-- `.env.example` — minimum shared environment shape
-- `npm run doctor` — repo health check for the active surfaces
-
-## Active Surfaces
-
-| Path | Purpose | Primary check |
+| Area | Paths | Role |
 | --- | --- | --- |
-| `sdk/` | TypeScript SDK for external integrations | `npx tsc -p sdk/tsconfig.json --noEmit` |
-| `leviathan/` | sovereign runtime CLI and loop | `npx tsc -p leviathan/tsconfig.json --noEmit` |
-| `clawdrouter/` | model-routing layer | `npx tsc -p clawdrouter/tsconfig.json --noEmit` |
-| `MCP/` | MCP server and orchestrator | `npx tsc -p MCP/tsconfig.json --noEmit` |
-| `gateway/` | Solana/Telegram HTTP gateway | `npm --prefix gateway install && npx tsc -p gateway/tsconfig.json --noEmit` |
-| `beepboop/worker/` | Cloudflare worker for install/chat/Solana proxy | `npm --prefix beepboop/worker install --ignore-scripts && wrangler deploy --dry-run` |
-| `beepboop/convex/` | Convex install-tracking backend | `npm --prefix beepboop/convex install && convex --help` |
-| `automaton-main/automation/` | automation hub bootstrap and CI orchestration | `npm run doctor` |
+| Entry and SDK | `src/`, `sdk/`, `packages/` | Root CLI/library and reusable SDK, wallet, perps packages |
+| Local services | `gateway/`, `mcp/`, `clawdrouter/` | Shared registry/skills/data, MCP tools, optional model proxy |
+| Runtime | `leviathan/`, `ooda/`, `deep-clawd/`, `agent-tasks/`, `agent-kit/` | Agent orchestration and strategies |
+| Clients | `tui/`, `apps/`, `tailclawd/`, `chrome-extension/`, `clawdcli/`, `clawd-cloud-os/` | Terminal, desktop, browser and cloud clients |
+| Private AI | `attestation/` | Solana attestation program, private inference, agent router, terminal, proofs |
+| Markets and programs | `amm/`, `Perps/`, `programs/`, `pinocchio/`, `llm_oracle/`, `pump-fun/`, `ore-master/`, `vulcan-cli-master/` | Market integrations and independent Rust/Anchor programs |
+| Agents and knowledge | `agents/`, `skills/`, `memory/`, `MemeBRain/`, `llm-wiki-tang/`, `moltbook-agent/` | Catalogs, skills and memory systems |
+| Protocols and integrations | `x402/`, `a2a-x402-main/`, `adk/`, `email-worker/`, `openShell/`, `operator/`, `python/` | Payments, interoperability and separate runtimes |
+| Preserved apps | `automaton-main/`, `dark-defi/`, `plugin.delivery/` | Independent application/toolchain boundaries |
+| Optional submodules | `openclawd/`, `payments/`, `ultra/`, `llm_oracle/upstream/*` | Initialize deliberately after reviewing `.gitmodules` |
+| Workspace support | `scripts/`, `docs/`, `examples/`, `formal_verification/`, `hackathon/`, `data/`, `starter/` | Build graph, verification, documentation and examples |
 
-## Treat As Embedded Or Upstream
-
-These directories are large, useful, and sometimes runnable, but they are not part of the default root verification path:
-
-- `openclawd/`
-- `openclawd-framework/`
-- `plugin.delivery/`
-- `solana-mcp-official-main/`
-- `MemeBRain/`
-- `pinocchio/`
-- `programs/`
-- `chrome-extension/`
-- `openShell/`
-- `x402/`
-
-## Conventions
-
-- Use Node `20` to `22`. `.nvmrc` pins `22`.
-- Do not commit real `.env` files, private keys, or worker secrets.
-- Prefer package-local installs for subprojects with their own `package.json`.
-- Use `npm run doctor` before release-facing changes.
+Use exact path casing: `mcp/`, `Perps/`, and `apps/beepboop/`. Node 22 is the
+root toolchain. Installs are explicit; checks/builds do not install dependencies.

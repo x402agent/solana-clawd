@@ -1,18 +1,27 @@
 {
   "name": "@openclawdsolana/clawd-standalone",
   "version": "1.3.0",
-  "description": "🦞 Clawd CLI Standalone — lobster agent with Grok, Solana tools, and MCP support, decoupled from the full Leviathan runtime.",
+  "description": "\ud83e\udd9e Clawd CLI Standalone \u2014 lobster agent with Grok, Solana tools, and MCP support, decoupled from the full Leviathan runtime.",
   "type": "module",
   "main": "index.js",
   "bin": {
     "clawd-standalone": "index.js"
   },
-  "keywords": ["clawd", "lobster", "cli", "grok", "solana", "agent", "openclawd"],
+  "keywords": [
+    "clawd",
+    "lobster",
+    "cli",
+    "grok",
+    "solana",
+    "agent",
+    "openclawd"
+  ],
   "license": "MIT",
   "scripts": {
     "build": "echo \"clawd-standalone ships pre-built (index.js, no compile step)\"",
     "postinstall": "node scripts/postinstall.mjs",
-    "start": "node index.js"
+    "start": "node index.js",
+    "typecheck": "node --check index.js"
   },
   "dependencies": {
     "ink": "^7.0.0",

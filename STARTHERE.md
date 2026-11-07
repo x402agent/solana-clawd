@@ -1,3 +1,15 @@
+# Start here
+
+Use Node 22 (`nvm use`), then run `npm run setup`. Start the connected local gateway
+and MCP with `npm run stack`; verify their tool connection with `npm run stack:check`.
+
+[The workspace guide](docs/WORKSPACE.md) is the canonical local setup and verification
+path. [The component inventory](workspace.components.json) includes the complete
+repository; `npm run workspace -- list` prints it. The older product overview below
+provides background; use the workspace guide for current commands and paths.
+
+---
+
 <div align="center">
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12,20,24,28&height=240&section=header&text=%F0%9F%A6%9E%20OpenClawd%20x%20HERMES%20x402&fontSize=64&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Sovereign%20AI%20agents%20on%20Solana%20%C2%B7%20Born%20to%20Earn%20%C2%B7%20Beach%20with%20Dignity&descAlignY=58&descAlign=50" alt="OpenClawd x HERMES x402 banner" />

@@ -629,9 +629,10 @@
     {
       "id": "payments",
       "path": "payments",
-      "category": "placeholder",
-      "purpose": "Empty payments placeholder; actual payment protocol examples live under x402",
-      "required": false
+      "category": "submodule",
+      "purpose": "Optional Solana payment SDK submodule; x402 contains the local payment examples",
+      "required": false,
+      "submodule": true
     },
     {
       "id": "perps",
@@ -920,7 +921,8 @@
         "clawd"
       ],
       "tasks": {
-        "build": "build"
+        "build": "build",
+        "check": "typecheck"
       }
     },
     {
@@ -1040,14 +1042,6 @@
       "path": "llm_oracle/upstream/percolator-prog",
       "category": "submodule",
       "purpose": "Percolator Solana program reference",
-      "required": false,
-      "submodule": true
-    },
-    {
-      "id": "pay",
-      "path": "pay",
-      "category": "submodule",
-      "purpose": "Optional payment SDK submodule",
       "required": false,
       "submodule": true
     },

@@ -1,3 +1,8 @@
+> **Local workspace:** Start with [the integration guide](docs/WORKSPACE.md). Use Node 22,
+> `npm run setup`, then `npm run stack`. Run `npm run workspace -- list` for all
+> components and `npm run smoke:readme` for local integration verification.
+> Optional runtimes, upstream trees and chain programs have separate prerequisites.
+
 <div align="center">
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:05060d,12:1a0a2e,28:9945FF,50:14F195,72:FF5F1F,88:FFD166,100:05060d&height=300&section=header&text=CLAWD&fontSize=90&fontColor=ffffff&animation=twinkling&fontAlignY=42&desc=The%20Verifiable%20Agentic%20Harness&descAlignY=64&descSize=22" alt="CLAWD — The Verifiable Agentic Harness" />

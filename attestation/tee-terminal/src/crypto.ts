@@ -40,7 +40,7 @@ export function deriveSessionKey(
   const sharedSecret = Buffer.from(diffieHellman({ privateKey: myPrivateKey, publicKey: theirPublicKey }));
   const salt = sha256(Buffer.from(sessionId, 'utf8'));
   const fn = _hkdfSync ?? manualHkdf;
-  return fn('sha256', sharedSecret, salt, 'clawd-tee-terminal-v1', 32);
+  return Buffer.from(fn('sha256', sharedSecret, salt, 'clawd-tee-terminal-v1', 32));
 }
 
 // RFC 5869 HKDF (pure Node crypto, no external deps)

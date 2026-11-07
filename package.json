@@ -328,13 +328,7 @@
     "packages/clawd-perps",
     "packages/clawd-sdk",
     "packages/clawd-wallet",
-    "packages/cli-standalone",
-    "dark-defi/packages/protocol",
-    "dark-defi/packages/sas-lib",
-    "dark-defi/packages/sdk",
-    "dark-defi/packages/tee-agents",
-    "dark-defi/packages/terminal",
-    "dark-defi/packages/dark-defi"
+    "packages/cli-standalone"
   ],
   "sideEffects": false,
   "keywords": [

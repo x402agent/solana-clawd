@@ -1,7 +1,7 @@
 {
   "name": "@openclawdsolana/clawd-sdk",
   "version": "0.1.0",
-  "description": "OpenClawd Solana SDK — Agent & token launches with adaptive bonding curves, Token2022, pTokens, and intelligent vault mechanics",
+  "description": "OpenClawd Solana SDK \u2014 Agent & token launches with adaptive bonding curves, Token2022, pTokens, and intelligent vault mechanics",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -37,7 +37,8 @@
     "test": "vitest run",
     "clean": "rm -rf dist",
     "postinstall": "node scripts/postinstall.mjs",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "keywords": [
     "solana",
@@ -50,7 +51,11 @@
     "openclawd"
   ],
   "license": "MIT",
-  "files": ["dist", "src", "scripts/postinstall.mjs"],
+  "files": [
+    "dist",
+    "src",
+    "scripts/postinstall.mjs"
+  ],
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.0",
     "@solana/spl-token": "^0.4.14",

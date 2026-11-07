@@ -1,12 +1,13 @@
 {
   "name": "@openclawdsolana/agent-router",
   "version": "0.1.0",
-  "description": "Solana-attested agent router — discover and route to agents by on-chain capability attestations",
+  "description": "Solana-attested agent router \u2014 discover and route to agents by on-chain capability attestations",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "dev": "ts-node src/index.ts",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@solana/kit": "^2.1.1",

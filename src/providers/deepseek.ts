@@ -91,10 +91,13 @@ export function resolveProvider(): ProviderInfo {
 /**
  * Returns an OpenAI-compatible client pointed at the resolved provider.
  * DeepSeek and OpenRouter both speak the OpenAI protocol.
- * For Anthropic direct, falls back to OpenRouter-style wrapper.
+ * Direct Anthropic uses a different wire protocol and must use its own client.
  */
 export function resolveOpenAIClient(): { client: OpenAI; model: string; provider: ProviderInfo } {
   const provider = resolveProvider();
+  if (provider.name === 'anthropic') {
+    throw new Error('Anthropic uses the Messages API. Use resolveAnthropicClient(), thinkingCall(), or singleToolCall(); OpenAI-format agent loops require DEEPSEEK_API_KEY or OPENROUTER_API_KEY.');
+  }
 
   const headers: Record<string, string> = {};
   if (provider.name === 'openrouter') {
@@ -170,6 +173,21 @@ export interface ThinkingCallResult {
  * OpenRouter: no thinking, returns content only
  */
 export async function thinkingCall(opts: ThinkingCallOptions): Promise<ThinkingCallResult> {
+  if (resolveProvider().name === 'anthropic') {
+    const { client, model, provider } = resolveAnthropicClient();
+    const response = await client.messages.create({
+      model,
+      max_tokens: opts.maxTokens ?? 2048,
+      system: opts.system,
+      messages: [{ role: 'user', content: opts.userMessage }],
+    });
+    return {
+      content: response.content.filter(block => block.type === 'text').map(block => block.text).join('\n'),
+      reasoning: null,
+      model,
+      provider: provider.name,
+    };
+  }
   const { client, model, provider } = resolveOpenAIClient();
   const { system, userMessage, maxTokens = 2048, effort = 'high' } = opts;
   const thinkModel = provider.supportsThinking ? provider.thinkingModel : model;
@@ -185,10 +203,10 @@ export async function thinkingCall(opts: ThinkingCallOptions): Promise<ThinkingC
       reasoning_effort: effort,
       extra_body: { thinking: { type: 'enabled' } },
     } : {}),
-  } as Parameters<typeof client.chat.completions.create>[0]);
+  } as import('openai/resources/chat/completions.js').ChatCompletionCreateParamsNonStreaming);
 
   const msg = response.choices[0]?.message;
-  const reasoning = (msg as unknown as { reasoning_content?: string }).reasoning_content ?? null;
+  const reasoning = (msg as unknown as { reasoning_content?: string } | undefined)?.reasoning_content ?? null;
 
   return {
     reasoning,
@@ -220,6 +238,30 @@ export async function singleToolCall(opts: {
   maxTokens?: number;
   thinking?: boolean;
 }): Promise<ToolCallResult> {
+  if (resolveProvider().name === 'anthropic') {
+    const { client, model } = resolveAnthropicClient();
+    const response = await client.messages.create({
+      model,
+      max_tokens: opts.maxTokens ?? 1024,
+      system: opts.system,
+      messages: [{ role: 'user', content: opts.userMessage }],
+      tools: opts.tools.map(({ function: tool }) => ({
+        name: tool.name,
+        description: tool.description,
+        input_schema: tool.parameters as Anthropic.Tool['input_schema'],
+      })),
+    });
+    const selected = response.content.find(block => block.type === 'tool_use');
+    if (selected?.type === 'tool_use') {
+      return { toolName: selected.name, toolInput: selected.input as Record<string, unknown>, reasoning: null, success: true };
+    }
+    return {
+      toolName: 'hold',
+      toolInput: { reason: response.content.filter(block => block.type === 'text').map(block => block.text).join('\n') || 'no tool selected' },
+      reasoning: null,
+      success: false,
+    };
+  }
   const { client, model, provider } = resolveOpenAIClient();
   const { system, userMessage, tools, maxTokens = 1024, thinking = false } = opts;
 
@@ -237,11 +279,11 @@ export async function singleToolCall(opts: {
     tools,
     tool_choice: 'auto',
     ...extraBody,
-  } as Parameters<typeof client.chat.completions.create>[0]);
+  } as import('openai/resources/chat/completions.js').ChatCompletionCreateParamsNonStreaming);
 
   const msg = response.choices[0]?.message;
   const toolCall = msg?.tool_calls?.[0];
-  const reasoning = (msg as unknown as { reasoning_content?: string }).reasoning_content ?? null;
+  const reasoning = (msg as unknown as { reasoning_content?: string } | undefined)?.reasoning_content ?? null;
 
   if (!toolCall) {
     return { toolName: 'hold', toolInput: { reason: msg?.content ?? 'no tool selected' }, reasoning, success: false };

@@ -22,8 +22,8 @@
 	path = my-project-public-fresh
 	url = gitlawb://did:key:z6Mkq5mY3JWtxoxUobWcfNHm7AkRubgSWEZTkBVqZXJviFZ5/my-project-public
 
-[submodule "pay"]
-	path = pay
+[submodule "payments"]
+	path = payments
 	url = https://github.com/x402agent/pay.git
 
 [submodule "ultra"]

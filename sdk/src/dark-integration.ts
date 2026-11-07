@@ -18,20 +18,31 @@
  *   const bundle = DarkTeeAgent.spawn({ agentId: 'hermes-01', owner: walletAddress });
  */
 
-import { DarkProtocolClient } from '@openclawdsolana/dark-sdk/dist/client.js';
-import { DarkWallet } from '@openclawdsolana/dark-sdk/dist/wallet.js';
-import { PrivacyUtils } from '@openclawdsolana/dark-sdk/dist/privacy.js';
-import { PrivateSwapManager } from '@openclawdsolana/dark-sdk/dist/swap.js';
-import { PriceOracle, type OracleConfig } from '@openclawdsolana/dark-sdk/dist/oracle.js';
-// ShieldedWallet omitted: shielded-wallet.js has broken internal ESM (./sapling missing .js)
+/**
+ * Optional provider boundary. These packages are not included in this checkout.
+ * Resolve them only when this adapter is imported; the core runtime stays usable.
+ * Runtime constructors come from the actual installed providers, never placeholders.
+ */
+async function importOptionalProvider(specifier: string) {
+  try {
+    return await import(specifier);
+  } catch (cause) {
+    const error = new Error(
+      `DARK_INTEGRATION_UNAVAILABLE: ${specifier} could not be loaded. ` +
+      'The original @openclawdsolana/dark-sdk and dark-tee-agents providers are optional and absent from this workspace. ' +
+      'The dark-defi application is a separate project and does not implement this adapter.',
+      { cause },
+    );
+    throw error;
+  }
+}
 
-import type {
-  DarkProtocolConfig,
-  Network as DarkNetwork,
-} from '@openclawdsolana/dark-sdk/dist/client.js';
-import type { SaplingHDWallet } from '@openclawdsolana/dark-sdk/dist/sapling.js';
-
-import {
+const { DarkProtocolClient } = await importOptionalProvider('@openclawdsolana/dark-sdk/dist/client.js');
+const { DarkWallet } = await importOptionalProvider('@openclawdsolana/dark-sdk/dist/wallet.js');
+const { PrivacyUtils } = await importOptionalProvider('@openclawdsolana/dark-sdk/dist/privacy.js');
+const { PrivateSwapManager } = await importOptionalProvider('@openclawdsolana/dark-sdk/dist/swap.js');
+const { PriceOracle } = await importOptionalProvider('@openclawdsolana/dark-sdk/dist/oracle.js');
+const {
   ConfidentialAgent,
   ConfidentialInferenceClient,
   DarkAttestationService,
@@ -39,16 +50,21 @@ import {
   PAYMENT_ASSETS,
   generateSigningKeypair,
   toBase58,
-} from '@openclawdsolana/dark-tee-agents';
+} = await importOptionalProvider('@openclawdsolana/dark-tee-agents');
 
-import type { ConfidentialAgentConfig } from '@openclawdsolana/dark-tee-agents';
-import type { TransactionSigner } from '@solana/kit';
+// Provider-specific types cannot be statically validated until the optional
+// providers are installed. Instance types are derived from their real loaders.
+type DarkProtocolClient = InstanceType<typeof DarkProtocolClient>;
+type DarkWallet = InstanceType<typeof DarkWallet>;
+type PrivateSwapManager = InstanceType<typeof PrivateSwapManager>;
+type PriceOracle = InstanceType<typeof PriceOracle>;
+type ConfidentialAgent = InstanceType<typeof ConfidentialAgent>;
 
 // ─── DarkClawdClient ──────────────────────────────────────────────────────────
 
 export interface DarkClawdConfig {
   heliusApiKey: string;
-  network?: DarkNetwork;
+  network?: 'mainnet' | 'devnet';
   jupiterApiKey?: string;
   redpillApiKey?: string;
   rpcUrl?: string;
@@ -67,7 +83,7 @@ export class DarkClawdClient {
   }
 
   static async create(cfg: DarkClawdConfig): Promise<DarkClawdClient> {
-    const sdkCfg: DarkProtocolConfig = {
+    const sdkCfg = {
       heliusApiKey: cfg.heliusApiKey,
       network: cfg.network ?? 'mainnet',
       useSecureRpc: true,
@@ -87,8 +103,8 @@ export class DarkClawdClient {
     return DarkWallet.fromMnemonic(this.protocol, mnemonic, accountIndex);
   }
 
-  async generateSaplingWallet(): Promise<{ wallet: SaplingHDWallet; mnemonic: string }> {
-    const { SaplingUtils } = await import('@openclawdsolana/dark-sdk/dist/sapling.js');
+  async generateSaplingWallet(): Promise<{ wallet: unknown; mnemonic: string }> {
+    const { SaplingUtils } = await importOptionalProvider('@openclawdsolana/dark-sdk/dist/sapling.js');
     return SaplingUtils.generateWallet();
   }
 
@@ -101,7 +117,7 @@ export class DarkClawdClient {
 
   get oracle(): PriceOracle {
     if (!this._oracle) {
-      const oracleCfg: OracleConfig = {
+      const oracleCfg = {
         heliusApiKey: this.cfg.heliusApiKey,
         jupiterApiKey: this.cfg.jupiterApiKey,
       };
@@ -144,7 +160,7 @@ export interface TeeAgentBundle {
 function spawnTeeAgent(params: DarkTeeAgentSpawnParams): TeeAgentBundle {
   const keypair = generateSigningKeypair();
   const address = toBase58(keypair.publicKey);
-  const agentCfg: ConfidentialAgentConfig = {
+  const agentCfg = {
     agentId: params.agentId,
     owner: params.owner,
     model: params.model ?? 'phala/deepseek-r1-70b-tee',
@@ -175,7 +191,7 @@ async function localInfer(
 ): Promise<{ text: string; receiptNonce: string }> {
   const { agent, address } = bundle;
   const requirements = teePaymentRequirements(agent, address, atomicPrice);
-  const { LocalSignerPayer } = await import('@openclawdsolana/dark-tee-agents');
+  const { LocalSignerPayer } = await importOptionalProvider('@openclawdsolana/dark-tee-agents');
   const localPayer = new LocalSignerPayer(bundle.keypair, true);
   const provider = agent.localProvider(
     (req: { prompt: string }) => `[clawd-tee] ${req.prompt}`,
@@ -201,8 +217,8 @@ async function anchorOnChain(params: {
   agent: ConfidentialAgent;
   heliusApiKey: string;
   network?: 'mainnet' | 'devnet';
-  payer: TransactionSigner;
-  authority: TransactionSigner;
+  payer: { address: string };
+  authority: { address: string };
 }) {
   const { agent, heliusApiKey, network = 'devnet', payer, authority } = params;
   const sas = DarkAttestationService.fromNetwork(network, heliusApiKey);
@@ -245,13 +261,13 @@ export const darkMcpTools = {
 
   async generateSaplingAddresses(count = 5): Promise<DarkMcpToolResult> {
     try {
-      const { SaplingUtils } = await import('@openclawdsolana/dark-sdk/dist/sapling.js');
+      const { SaplingUtils } = await importOptionalProvider('@openclawdsolana/dark-sdk/dist/sapling.js');
       const { wallet } = await SaplingUtils.generateWallet();
       return {
         ok: true,
         data: {
           defaultAddress: wallet.getDefaultAddress().toBase58(),
-          diversified: wallet.generateDiversifiedAddresses(count).map((a) => a.toBase58()),
+          diversified: wallet.generateDiversifiedAddresses(count).map((a: { toBase58(): string }) => a.toBase58()),
         },
       };
     } catch (err) {

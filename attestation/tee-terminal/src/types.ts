@@ -58,6 +58,7 @@ export interface ReadyPayload {
   credentialAddress: string;
   schemaAddress: string;
   serverVersion: string;
+  demoMode: boolean;
 }
 
 // ─── Command Routing ────────────────────────────────────────────────────────
@@ -81,6 +82,7 @@ export interface CommandResult {
   promptHash?: string;
   responseHash?: string;
   durationMs?: number;
+  demoMode?: boolean;
 }
 
 // ─── Config ─────────────────────────────────────────────────────────────────

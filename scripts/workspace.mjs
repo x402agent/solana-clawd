@@ -142,6 +142,16 @@ export function inspectWorkspace(manifest, root = workspaceRoot) {
       warnings.push(`${item.name}: directory is not cataloged in workspace.components.json`);
     }
   }
+  if (existsSync(path.join(root, '.gitmodules'))) {
+    const declared = [...readFileSync(path.join(root, '.gitmodules'), 'utf8').matchAll(/^\s*path\s*=\s*(.+)$/gm)].map(match => match[1].trim());
+    const cataloged = new Set(manifest.components.filter(c => c.submodule).map(c => c.path));
+    for (const submodule of declared) {
+      if (!cataloged.has(submodule)) errors.push(`.gitmodules: ${submodule} is not cataloged as a submodule`);
+    }
+    for (const submodule of cataloged) {
+      if (!declared.includes(submodule)) errors.push(`workspace.components.json: ${submodule} is not declared in .gitmodules`);
+    }
+  }
   try {
     const rootPackage = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
     for (const workspace of rootPackage.workspaces ?? []) {
@@ -215,16 +225,28 @@ Optional submodules, providers, wallet actions and deployments are never started
 export function main(argv = process.argv.slice(2), root = workspaceRoot) {
   const [command = 'doctor', ...rest] = argv;
   if (['-h', '--help', 'help'].includes(command)) { usage(); return 0; }
-  const json = rest.includes('--json');
-  const dryRun = rest.includes('--dry-run');
-  const taskIndex = rest.indexOf('--task');
-  const task = command === 'install' ? 'install' : taskIndex >= 0 ? rest[taskIndex + 1] : 'check';
-  const positionals = rest.filter((value, index) => !value.startsWith('--') && !(taskIndex >= 0 && index === taskIndex + 1));
-  const profile = positionals[0] ?? 'core';
-  for (const flag of rest.filter(value => value.startsWith('--'))) {
-    if (!['--json', '--dry-run', '--task'].includes(flag)) throw new Error(`Unknown option: ${flag}`);
+  if (!['list', 'doctor', 'plan', 'verify', 'install'].includes(command)) throw new Error(`Unknown command: ${command}`);
+  let json = false;
+  let dryRun = false;
+  let task = command === 'install' ? 'install' : 'check';
+  let taskProvided = false;
+  const positionals = [];
+  for (let index = 0; index < rest.length; index++) {
+    const value = rest[index];
+    if (value === '--json') json = true;
+    else if (value === '--dry-run') dryRun = true;
+    else if (value === '--task') {
+      if (taskProvided || !rest[index + 1] || rest[index + 1].startsWith('--')) throw new Error('--task requires one value');
+      task = rest[++index];
+      taskProvided = true;
+    } else if (value.startsWith('--')) throw new Error(`Unknown option: ${value}`);
+    else positionals.push(value);
   }
-  if (positionals.length > 1 || (taskIndex >= 0 && !rest[taskIndex + 1])) throw new Error('Invalid arguments; use --help');
+  if (positionals.length > 1) throw new Error('Only one profile can be selected');
+  if (['list', 'doctor'].includes(command) && (positionals.length || taskProvided || dryRun)) throw new Error(`${command} accepts only --json`);
+  if (command === 'install' && taskProvided) throw new Error('install does not accept --task');
+  if (json && ['verify', 'install'].includes(command) && !dryRun) throw new Error('--json is available for list, doctor, plan and --dry-run');
+  const profile = positionals[0] ?? 'core';
   const manifest = readManifest(root);
   const schemaErrors = validateManifest(manifest);
   if (schemaErrors.length) throw new Error(schemaErrors.join('\n'));
@@ -243,7 +265,6 @@ export function main(argv = process.argv.slice(2), root = workspaceRoot) {
     }
     return result.errors.length ? 1 : 0;
   }
-  if (!['plan', 'verify', 'install'].includes(command)) throw new Error(`Unknown command: ${command}`);
   if (command === 'verify' && task === 'install') throw new Error('verify never installs; use the explicit install command');
   const plan = createPlan(manifest, profile, task, root);
   if (command === 'plan' || dryRun) {

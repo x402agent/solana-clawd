@@ -92,9 +92,17 @@ export class TeeSessionManager {
     session.sessionKey = sessionKey;
     session.userSolanaPubkey = userSolanaPubkey;
     session.paramsHash = paramsHash;
-    session.isActive = true;
+    session.isActive = false;
 
-    const attestationAddress = await this.attestSessionOnChain(session);
+    let attestationAddress: string;
+    try {
+      attestationAddress = await this.attestSessionOnChain(session);
+    } catch (error) {
+      sessionKey.fill(0);
+      session.sessionKey = undefined;
+      throw error;
+    }
+    session.isActive = true;
     session.attestationAddress = attestationAddress;
 
     const readyPayload: ReadyPayload = {
@@ -102,6 +110,7 @@ export class TeeSessionManager {
       credentialAddress: this.config.credentialAddress ?? 'demo-credential',
       schemaAddress: this.config.teeSessionSchemaAddress ?? 'demo-schema',
       serverVersion: '0.1.0',
+      demoMode: this.config.demoMode,
     };
 
     this.sessions.set(sessionId, session);
@@ -109,8 +118,11 @@ export class TeeSessionManager {
   }
 
   private async attestSessionOnChain(session: TeeSession): Promise<string> {
-    if (this.config.demoMode || !this.config.credentialAddress) {
+    if (this.config.demoMode) {
       return demoAttestation(session.id, session.userSolanaPubkey ?? 'unknown');
+    }
+    if (!this.config.credentialAddress || !this.config.teeSessionSchemaAddress || !this.config.signerPrivateKeyBytes) {
+      throw new Error('Live TEE attestation requires credential, session schema, and signer configuration');
     }
     try {
       const { createSolanaRpc, address, pipe, createTransactionMessage,
@@ -172,8 +184,8 @@ export class TeeSessionManager {
       await sendAndConfirm(signedTx, { commitment: 'confirmed' });
       return attestationAddr.toString();
     } catch (err) {
-      console.error('[session] On-chain attestation failed, using demo address:', err);
-      return demoAttestation(session.id, session.userSolanaPubkey ?? 'unknown');
+      session.isActive = false;
+      throw new Error(`On-chain session attestation failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -185,7 +197,8 @@ export class TeeSessionManager {
     const session = this.sessions.get(sessionId);
     if (session) {
       session.isActive = false;
-      this.sessions.set(sessionId, session);
+      session.sessionKey?.fill(0);
+      this.sessions.delete(sessionId);
     }
   }
 

@@ -11,7 +11,9 @@
     "dev:server": "ts-node src/server.ts",
     "dev:cli": "ts-node src/cli.ts",
     "start": "node dist/server.js",
-    "cli": "ts-node src/cli.ts"
+    "cli": "ts-node src/cli.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run build && node --test tests/*.test.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
