@@ -103,11 +103,14 @@
       },
       "runtime": {
         "environment": [
+          "CLAWDROUTER_PORT",
           "OPENROUTER_API_KEY",
           "XAI_API_KEY",
           "DEEPSEEK_API_KEY"
         ],
-        "notes": "Routing providers require separate credentials; the funded router server is opt-in."
+        "notes": "Routing providers require separate credentials; the funded router server is opt-in.",
+        "port": 8402,
+        "health": "/health"
       }
     },
     {
@@ -159,14 +162,21 @@
         "port": 3001,
         "environment": [
           "MCP_PORT",
-          "GATEWAY_BASE_URL"
+          "MCP_HOST",
+          "GATEWAY_URL",
+          "CLAWD_GATEWAY_URL"
         ],
         "connectsTo": [
           "gateway",
           "router",
           "leviathan"
         ],
-        "notes": "HTTP and stdio are separate transports. Configure external providers before invoking their tools."
+        "notes": "HTTP and stdio are separate transports. Configure external providers before invoking their tools.",
+        "health": "/health",
+        "transports": [
+          "/mcp",
+          "/sse"
+        ]
       }
     },
     {
@@ -193,16 +203,16 @@
       "runtime": {
         "port": 8080,
         "environment": [
-          "PORT",
-          "GATEWAY_BASE_URL",
+          "GATEWAY_PORT",
+          "GATEWAY_HOST",
+          "GATEWAY_BACKGROUND_ENABLED",
           "SOLANA_RPC_URL",
           "HELIUS_API_KEY",
           "BIRDEYE_API_KEY"
         ],
-        "connectsTo": [
-          "mcp"
-        ],
-        "notes": "Starts independently; external RPC, registry and Telegram services require their own configuration."
+        "connectsTo": [],
+        "notes": "MCP can consume this HTTP service. Background Telegram and Birdeye jobs are opt-in with GATEWAY_BACKGROUND_ENABLED=true.",
+        "health": "/health"
       }
     },
     {
@@ -949,7 +959,14 @@
       "runtime": {
         "connectsTo": [
           "attestation"
-        ]
+        ],
+        "port": 8443,
+        "environment": [
+          "TEE_PORT",
+          "TEE_SERVER_URL"
+        ],
+        "transport": "websocket",
+        "notes": "Optional session server; a local build does not prove hardware TEE attestation."
       }
     },
     {

@@ -157,6 +157,7 @@ export function createPlan(manifest, profile = 'core', task = 'check', root = wo
   if (!validTasks.has(task)) throw new Error(`Unknown task '${task}'; use check, build or install`);
   if (!manifest.profiles[profile]) throw new Error(`Unknown profile '${profile}'; use ${Object.keys(manifest.profiles).join(', ')}`);
   const components = orderComponents(manifest, manifest.profiles[profile]);
+  if (task === 'install') components.sort((a, b) => (a.path === '.' ? -1 : b.path === '.' ? 1 : 0));
   return components.map(c => {
     const base = { id: c.id, path: c.path, task, buildAfter: c.buildAfter ?? [] };
     if (task === 'install') {
@@ -218,7 +219,7 @@ export function main(argv = process.argv.slice(2), root = workspaceRoot) {
   const dryRun = rest.includes('--dry-run');
   const taskIndex = rest.indexOf('--task');
   const task = command === 'install' ? 'install' : taskIndex >= 0 ? rest[taskIndex + 1] : 'check';
-  const positionals = rest.filter((value, index) => !value.startsWith('--') && index !== taskIndex + 1);
+  const positionals = rest.filter((value, index) => !value.startsWith('--') && !(taskIndex >= 0 && index === taskIndex + 1));
   const profile = positionals[0] ?? 'core';
   for (const flag of rest.filter(value => value.startsWith('--'))) {
     if (!['--json', '--dry-run', '--task'].includes(flag)) throw new Error(`Unknown option: ${flag}`);
