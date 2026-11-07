@@ -14,7 +14,7 @@
     "cli": "tsx src/cli.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "npm run build && node --test tests/*.test.cjs",
-    "test:neon": "tsx --test test/neon-infer.test.ts"
+    "test:neon": "tsx --test --test-concurrency=1 test/neon-infer.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",

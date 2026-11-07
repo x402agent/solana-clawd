@@ -1027,14 +1027,14 @@ Public mirror source groups:
 
 | Zone | Paths | Publish posture |
 | --- | --- | --- |
-| Agent interface | `.claude`, `.github`, `adk`, `agent-kit`, `agents`, `mcp`, `skills` | Track source and examples only; local Claude settings stay ignored |
-| Gateway + governance | `gateway`, `x402`, `attestation`, `formal_verification`, `docs`, `examples` | Track public code, proofs, manifests, and templates |
-| Solana execution | `amm`, `perps`, `programs`, `pump-fun`, `pinocchio`, `llm_oracle`, `vulcan-cli-master` | Track source and examples; never commit keys or live `.env` files |
+| Agent interface | `.claude`, `.github`, `adk`, `agent-kit`, `agents`, `mcp`, `skills`, [`agent-tasks`](./agent-tasks) | Track source and examples only; local Claude settings stay ignored |
+| Gateway + governance | `gateway`, `x402`, `attestation` ([`agent-router`](./attestation/agent-router), [`cereal_macro`](./attestation/cereal_macro), [`clients`](./attestation/clients), [`core`](./attestation/core), [`examples`](./attestation/examples), [`formal_verification`](./attestation/formal_verification), [`idl`](./attestation/idl), [`inference`](./attestation/inference), [`integration_tests`](./attestation/integration_tests), [`program`](./attestation/program), [`scripts`](./attestation/scripts), [`tee-terminal`](./attestation/tee-terminal)), `formal_verification` ([`kani`](./formal_verification/kani), [`gate.ts`](./formal_verification/gate.ts), [`skill-hub.ts`](./formal_verification/skill-hub.ts), [`skill-hub-registry.json`](./formal_verification/skill-hub-registry.json), [`stride.ts`](./formal_verification/stride.ts), [`verified-registry.json`](./formal_verification/verified-registry.json), [`SPEC.md`](./formal_verification/SPEC.md), [`VERIFIER.md`](./formal_verification/VERIFIER.md)), `docs`, `examples`, [`a2a-x402-main`](./a2a-x402-main) | Track public code, proofs, manifests, and templates |
+| Solana execution | `amm`, [`Perps`](./Perps), `programs`, `pump-fun`, `pinocchio`, `llm_oracle`, `vulcan-cli-master` | Track source and examples; never commit keys or live `.env` files |
 | Apps + operators | `apps`, `tui`, `chrome-extension`, `operator`, `clawd-cloud-os`, `tailclawd` | Track app source; `tui/.env`, `tui/dist`, and `tui/node_modules` stay local-only |
-| Automation + memory | `automaton-main`, `leviathan`, `MemeBRain`, `moltbook-agent`, `ooda`, `deep-clawd`, `data` | Track source/config templates; private data dumps stay local-only |
-| SDK + packages | `packages`, `sdk`, `clawdcli`, `clawdrouter`, `openShell`, `email-worker`, `scripts` | Track reusable package source and automation |
-| Local-only vaults | `.local-secrets`, `openclawd-framework`, `UltraThink-SKill`, `node_modules` | Ignored. Do not push to GitHub, gitlawb, npm, or deployment artifacts |
-| Root docs/config | `.env.example`, `.gitattributes`, `.gitignore`, `.gitmodules`, `.nvmrc`, `biome.json`, `bun.lock`, `bunfig.toml`, `CONTRIBUTING.md`, `HACKATHON.md`, `install.sh`, `leviathan.sh`, `LICENSE`, `MIGRATE.md`, `netlify.toml`, `package-lock.json`, `package.json`, `README.md`, `SECURITY.md`, `skills-lock.json`, `SOUL.md`, `STARTHERE`, `STARTHERE.md`, `STRATEGY.md`, `TRADE.md`, `tsconfig*.json` | Track public project metadata and non-secret examples |
+| Automation + memory | `automaton-main`, `leviathan`, `MemeBRain`, `moltbook-agent`, `ooda`, `deep-clawd`, `data`, [`memory/`](./memory), [`llm-wiki-tang`](./llm-wiki-tang) | Track source/config templates; private data dumps stay local-only |
+| SDK + packages | [`src/`](./src), `packages`, `sdk`, `clawdcli`, `clawdrouter`, `openShell`, `email-worker`, `scripts`, [`python`](./python), [`starter`](./starter), [`payments`](./payments), [`plugin.delivery`](./plugin.delivery), [`ultra`](./ultra) | Track reusable package source and automation |
+| Local-only vaults | `.local-secrets`, `openclawd-framework`, `UltraThink-SKill`, `node_modules`, `amm/node_modules`, `dist`, `attestation/target`, live `attestation/.env` | Ignored. Do not push to GitHub, gitlawb, npm, or deployment artifacts |
+| Root docs/config | `.env.example`, `.gitattributes`, `.gitignore`, `.gitmodules`, `.nvmrc`, `biome.json`, `bun.lock`, `bunfig.toml`, `CONTRIBUTING.md`, `HACKATHON.md`, `install.sh`, `leviathan.sh`, `LICENSE`, `MIGRATE.md`, `netlify.toml`, `package-lock.json`, `package.json`, `README.md`, `SECURITY.md`, `skills-lock.json`, `SOUL.md`, `STARTHERE`, `STARTHERE.md`, `STRATEGY.md`, `TRADE.md`, `tsconfig*.json`, [`BROWSER.md`](./BROWSER.md), [`DARKDEFI.md`](./DARKDEFI.md), [`gateway-destinations-snapshot.md`](./gateway-destinations-snapshot.md), [`upgrade.txt`](./upgrade.txt), [`workspace.components.json`](./workspace.components.json) | Track public project metadata and non-secret examples |
 
 Viral surface area is deliberate: animated docs, explicit agent maps, private gateway manifests, verifiable Solana receipts, and x402 routes are all visible. Private material is not.
 
@@ -1297,6 +1297,7 @@ enter --loop 5
 
 ```text
 solana-clawd/
+├── src/                             public SDK and CLI facade
 ├── packages/clawd/src/aud-loop.ts   ← AUD Loop — Algorithmic Utility Delta
 ├── mcp/                             MCP v3 — receipt middleware + federation
 ├── sdk/                             runtime source, goals, knowledge
@@ -1312,14 +1313,40 @@ solana-clawd/
 │   └── dark-protocol-program/       on-chain Anchor program
 ├── automaton-main/                  clawd-automaton OODA runtime + dashboard
 ├── attestation/                     Solana Attestation Service + clients
+│   ├── program/                     on-chain Solana Attestation Service
+│   ├── idl/                         generated program IDL
+│   ├── clients/                     TypeScript and Rust SAS clients
+│   ├── core/                        attestation primitive data types
+│   ├── cereal_macro/                schema serialization proc macro
+│   ├── examples/                    Rust and TypeScript flow guides
+│   ├── formal_verification/         Lean / QEDGen attestation proofs
+│   ├── inference/                   private inference, hashes on-chain
+│   ├── integration_tests/           end-to-end SAS harness
+│   ├── scripts/                     IDL and client generation
+│   ├── agent-router/                route by on-chain capability attestations
+│   └── tee-terminal/                encrypted terminal, private AI routing
+├── formal_verification/             specs, registries, and verification gates
+│   ├── SPEC.md                      128-bit perpetual risk engine spec
+│   ├── VERIFIER.md                  three-check verifier workflow
+│   ├── gate.ts                      injection gate
+│   ├── skill-hub.ts                 skill hub registry and deterministic IDs
+│   ├── skill-hub-registry.json      skill hub registry snapshot
+│   ├── stride.ts                    STRIDE threat model
+│   ├── verified-registry.json       verified component registry
+│   └── kani/                        Rust/Kani risk harness
 ├── operator/                        OpenClawd Operator loop + ACP
 ├── agents/                          134-agent catalog + 115 skills
+├── agent-tasks/                     agent task templates and examples
 ├── leviathan/                       sovereign runtime
 ├── x402/                            payment rails
+├── a2a-x402-main/                   A2A x402 protocol spec and Python examples
+├── payments/                        optional Solana payment SDK submodule
 ├── MemeBRain/                       SQLite + markdown memory vault
+├── memory/                          Python memory provider and Hermes integration
+├── llm-wiki-tang/                   knowledge vault — Python API/MCP and web UI
 ├── tui/                             Bloomberg TUI + Metaplex Agent CLI
-├── perps/clawd-agents-perps/        OI Signal + Imperial + Phoenix + TWAMM
-├── perps/                           Phoenix, Vulcan, market-maker suite
+├── Perps/clawd-agents-perps/        OI Signal + Imperial + Phoenix + TWAMM
+├── Perps/                           Phoenix, Vulcan, market-maker suite — inventory path for independent perp implementations
 ├── programs/                        Anchor programs workspace
 │   ├── agent-minter/
 │   ├── clawd-stake/
@@ -1334,6 +1361,15 @@ solana-clawd/
 │   ├── clawd-sdk/                   on-chain SDK (agent launch, bonding curves)
 │   ├── clawd-wallet/                wallet SDK + safeguards
 │   └── agentwallet/                 encrypted keypair vault (auth-hardened)
+├── python/                          Python trading and operator companion
+├── starter/                         starter project templates and env examples
+├── plugin.delivery/                 independent plugin registry monorepo
+├── ultra/                           optional UltraThink skill submodule
+├── BROWSER.md                       ClawdBrowser surface notes
+├── DARKDEFI.md                      Dark Protocol one-page guide
+├── gateway-destinations-snapshot.md gateway destination snapshot
+├── upgrade.txt                      CLAWD upgrade log
+├── workspace.components.json        component inventory
 └── openclawd/                       x402, gateway, E2B subtree
 ```
 

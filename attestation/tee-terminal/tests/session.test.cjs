@@ -17,7 +17,9 @@ test('demo terminal completes encrypted roundtrip and clears the closed session'
   const command = decrypt(ready.sessionKey, request).toString();
   const result = await new CommandRouter(config).route(ready, command);
   const response = encrypt(ready.sessionKey, Buffer.from(JSON.stringify(result)), 1);
-  assert.match(JSON.parse(decrypt(clientKey, response).toString()).output, /CLAWD TEE Terminal Commands/);
+  const decrypted = JSON.parse(decrypt(clientKey, response).toString());
+  assert.match(decrypted.output, /CLAWD TEE Terminal Commands/);
+  console.log(decrypted.output);
   const tampered = { ...request, ciphertext: Buffer.from('invalid').toString('base64') };
   assert.throws(() => decrypt(ready.sessionKey, tampered));
   sessions.closeSession(sessionId);
